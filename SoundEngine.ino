@@ -6,8 +6,6 @@ const int OUT_PIN  = 6;
 
 int   curFreq        = 0; 
 int   baseFreq       = 0; 
-float anchor_pitch_deg = 0.0f; 
-extern float pitch_deg_filt;
 
 const int VIB_DEPTH_HZ = 5;
 const float VIB_RATE_HZ  = 6.0f;

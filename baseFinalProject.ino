@@ -2,10 +2,7 @@
 
 extern int   curFreq;
 extern int   baseFreq;
-extern float pitch_deg_filt;
-extern float anchor_pitch_deg;
 int keyToFreq(char c);
-
 
 extern void mpuInit();
 extern void pollIMUAndUpdatePitch();
@@ -20,8 +17,8 @@ void setup() {
   Serial.begin(9600);
   while (!Serial) {}
 
-  initGPT();   
-  mpuInit(); 
+  initGPT();
+  mpuInit();
 }
 
 void loop() {
@@ -29,35 +26,35 @@ void loop() {
     char c = Serial.read();
     if (c == '\r' || c == '\n') continue;
 
+    // Select a base note SILENTLY. Do NOT call playNote here.
     int f = keyToFreq(c);
     if (f > 0) {
-      curFreq          = f;
-      baseFreq         = f;               
-      anchor_pitch_deg = pitch_deg_filt; 
-      playNote(f);
+      baseFreq = f;        // choose the base reference for tilt mapping
+      // optional: silence any ongoing note until you twist:
+      stopPlay();
       continue;
     }
 
-
-    if (c == ' ') {     // mute
+    if (c == ' ') {        // mute / reset
       stopPlay();
       curFreq  = 0;
       baseFreq = 0;
       continue;
     }
-    if (c == 'v') {
+    if (c == 'v') {        // force vibrato on (rate example)
       setVibrato(6.0f);
       continue;
     }
-    if (c == 'V') {
+    if (c == 'V') {        // vibrato off
       stopVibrato();
       continue;
     }
-    if (c == 'c') {     
-      anchor_pitch_deg = pitch_deg_filt;
-      continue;
-    }
+    // 'c' was unused; removed to keep behavior clean
   }
 
+  // IMU code will:
+  // - map Y-tilt -> target pitch (silently),
+  // - map X-tilt -> vibrato amount,
+  // - trigger playNote(curFreq) ONLY on Z-twist.
   pollIMUAndUpdatePitch();
 }
