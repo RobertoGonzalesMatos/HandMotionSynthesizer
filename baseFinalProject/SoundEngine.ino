@@ -15,18 +15,18 @@ void noteISR();
 
 int keyToFreq(char c) {
   switch (c) {
-    case 'a': return 262;
-    case 's': return 294;
-    case 'd': return 330;
-    case 'f': return 349;
-    case 'g': return 392;
-    case 'h': return 440;
-    case 'j': return 494;
-    case 'w': return 277;
-    case 'e': return 311;
-    case 't': return 370;
-    case 'y': return 415;
-    case 'u': return 466;
+    case 'C': return 262; 
+    case 'D': return 294; 
+    case 'E': return 330;
+    case 'F': return 349;
+    case 'G': return 392;
+    case 'A': return 440;
+    case 'B': return 494;
+    case 'C#': return 277;
+    case 'D#': return 311;
+    case 'F#': return 370;
+    case 'G#': return 415;
+    case 'A#': return 466;
   }
   return 0;
 }
