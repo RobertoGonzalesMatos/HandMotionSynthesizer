@@ -1,4 +1,5 @@
 #include <math.h>
+#include "SoundEngine.h"
 
 extern int   curFreq;
 extern int   baseFreq;
@@ -56,5 +57,4 @@ void loop() {
   // - map Y-tilt -> target pitch (silently),
   // - map X-tilt -> vibrato amount,
   // - trigger playNote(curFreq) ONLY on Z-twist.
-  pollIMUAndUpdatePitch();
-}
+  po

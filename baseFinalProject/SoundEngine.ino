@@ -1,3 +1,5 @@
+#include "SoundEngine.h"
+
 const int CLOCKFREQ      = 3000000;
 const unsigned int TIMER_INT = 31;
 const unsigned int NOTE_INT  = 29;
@@ -139,5 +141,4 @@ void noteISR() {
 
   R_GPT3->GTCR_b.CST = 1;
   R_ICU->IELSR_b[NOTE_INT].IR = 0;
-  NVIC_ClearPendingIRQ((IRQn_Type)NOTE_INT);
-}
+  NVIC_ClearPendingIR
