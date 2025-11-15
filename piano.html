@@ -39,7 +39,6 @@
         <h2>Modes</h2>
         <p>Select different modes to change the sound and behavior of the synthesizer.</p>
         <button id="drum">Drum Mode</button>
-
     </section>
 
     <section id="score-container">
@@ -93,22 +92,22 @@
       updateScore(note);
     }
 
-        const notePositions = {
+    const notePositions = {
       "C": 2,
-      "C#": 78,
+      "C#": 2,
       "D": -4,
-      "D#": 68,
+      "D#": 38,
       "E": -10,
       "F": -16,
-      "F#": 50,
+      "F#": 28,
       "G": 20,
-      "G#": 40,
+      "G#": 20,
       "A": 14,
-      "A#": 30,
+      "A#": 12,
       "B": 8
     };
 
-    function updateScore(note) {
+  function updateScore(note) {
       const noteHead = document.getElementById("note-head");
       noteHead.style.top = notePositions[note] + "px";
       document.getElementById("current-note").textContent = note;

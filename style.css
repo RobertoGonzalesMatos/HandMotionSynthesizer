@@ -93,7 +93,7 @@
 
 #note-head {
   position: absolute;
-  left: 150px; /* middle of the staff */
+  left: 150px;
   font-size: 32px;
   transition: top 0.2s ease;
 }
