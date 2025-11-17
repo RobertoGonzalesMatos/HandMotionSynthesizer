@@ -3,7 +3,8 @@
 #include <math.h>
 
 // ===== GLOBAL FSM INSTANCE =====
-static full_state FS = {440, 0, false, 0, s_INIT};
+// Start with 0 so first valid targetFreqHz will trigger a play.
+static full_state FS = {0, 0, false, 0, s_INIT};
 
 // ===== External audio interface (implemented elsewhere in your project) =====
 extern int  baseFreq;
@@ -13,7 +14,7 @@ extern void stopVibrato();
 extern void setVibrato(float vibRateHz);
 extern int  curFreq;
 
-static int lastAnnouncedHz = -1; 
+static int lastAnnouncedHz = -1;
 
 // ===== MPU-6050 register map and constants =====
 static const uint8_t MPU_ADDR    = 0x68;
@@ -117,7 +118,7 @@ static inline void doStop() {
 #define BUTTON_PIN 2
 #endif
 
-static inline void pet_watchdog() { /* hook if you use a WDT */ }
+static inline void pet_watchdog() { }
 static inline bool readButton() {   // active HIGH by default; tweak if needed
   pinMode(BUTTON_PIN, INPUT);
   return digitalRead(BUTTON_PIN) == HIGH;
@@ -218,9 +219,8 @@ static inline int quantizeWithHys(float semi_cont) {
   return lastSemi;
 }
 
-
-
 // ===== updateFSM (same style as your snake code) =====
+// xRead = targetFreqHz, yRead = vibrato Hz, zRead = yaw_deg
 full_state updateFSM(full_state currState,
                      float xRead, float yRead, float zRead,
                      bool buttonOn, unsigned long clock) {
@@ -229,10 +229,18 @@ full_state updateFSM(full_state currState,
 
   switch (currState.state) {
     case s_INIT:
-      // 1-2: msg != NONE → noteFrequency = msg.frequency (treat targetFreqHz as "msg")
+      // 1-2: msg != NONE → noteFrequency = msg.frequency
+      // Treat targetFreqHz as "msg" and start note once we have a valid freq.
       if (targetFreqHz > 0) {
-        Serial.println(F("t 1–2: init → reg_calc"));
+        Serial.println(F("t 1–2: init → reg_calc (start note)"));
         ret.noteFrequency = targetFreqHz;
+
+        vibForceStop();
+        curFreq = (int)ret.noteFrequency;
+        playNote(curFreq);
+        notePlaying = true;
+
+        ret.savedClock = clock;
         ret.state = s_REG_CALC;
       }
       break;
@@ -248,7 +256,7 @@ full_state updateFSM(full_state currState,
       break;
 
     case s_REG_WAIT:
-      // 3-2 (a): stop() if |zRead| >= 25
+      // 3-2 (a): stop() if |zRead| >= 25  (use yaw as "stop twist")
       if (fiveMs && !buttonOn && fabsf(zRead) >= 25.0f) {
         Serial.println(F("t 3–2a: stop()"));
         doStop();
@@ -256,20 +264,36 @@ full_state updateFSM(full_state currState,
         ret.state = s_REG_CALC;
         break;
       }
+
+      // NEW: If we're silent but have a valid freq, start playing
+      if (fiveMs && !buttonOn && !notePlaying && xRead > 0.0f) {
+        Serial.println(F("t 3–2: start note (was silent)"));
+        vibForceStop();
+        ret.noteFrequency = (unsigned long)xRead;
+        curFreq = (int)ret.noteFrequency;
+        playNote(curFreq);
+        notePlaying = true;
+        ret.savedClock = clock;
+        ret.state = s_REG_CALC;
+        break;
+      }
+
       // 3-2 (b): vibrato() if yRead > 0 → vibratoAmount = yRead
       if (fiveMs && !buttonOn && yRead > 0.0f) {
         Serial.println(F("t 3–2b: vibrato()"));
-        vibApply(yRead);                       // use safe vibrato helper
+        vibApply(yRead);
         ret.vibratoLevel = (unsigned long)yRead;
         pet_watchdog();
         ret.savedClock = clock;
         ret.state = s_REG_CALC;
         break;
       }
+
       // 3-2 (c): playNote() if xRead != noteFrequency → noteFrequency = xRead
-      if (fiveMs && !buttonOn && fabsf(xRead - (float)currState.noteFrequency) > 1.0f) {
-        Serial.println(F("t 3–2c: playNote()"));
-        vibForceStop();                        // stop LFO before re-tune
+      if (fiveMs && !buttonOn &&
+          fabsf(xRead - (float)currState.noteFrequency) > 1.0f) {
+        Serial.println(F("t 3–2c: playNote(retune)"));
+        vibForceStop();
         ret.noteFrequency = (unsigned long)xRead;
         if (ret.noteFrequency > 0) {
           curFreq = (int)ret.noteFrequency;
@@ -282,6 +306,7 @@ full_state updateFSM(full_state currState,
         ret.state = s_REG_CALC;
         break;
       }
+
       // 3-4: toggle to Drum Mode
       if (buttonOn && !currState.gestureModeOn) {
         Serial.println(F("t 3–4: You are in Drum Mode!"));
@@ -341,8 +366,8 @@ void pollIMUAndUpdatePitch() {
   float gy_dps = (float)gyr / 131.0f;
   float gz_dps = (float)gzr / 131.0f;
 
-  // 2) Apply mounting transform (optional; here we just use raw g's)
-  float ux = ax_g, uy = ay_g, uz = az_g;
+  // 2) Apply mounting transform
+  float ux, uy, uz;
   applyMount(ax_g, ay_g, az_g, ux, uy, uz);
 
   // 3) Accel-only reference angles
@@ -350,7 +375,8 @@ void pollIMUAndUpdatePitch() {
   float roll_acc  = atan2f( uy, uz ) * 180.0f / PI;
 
   // 4) Complementary filter
-  float dt = (last_t_ms == 0) ? (IMU_DT_MS / 1000.0f) : (now - last_t_ms) / 1000.0f;
+  float dt = (last_t_ms == 0) ? (IMU_DT_MS / 1000.0f)
+                              : (now - last_t_ms) / 1000.0f;
   last_t_ms = now;
   pitch_est = CF_ALPHA * (pitch_est + gy_dps * dt) + (1.0f - CF_ALPHA) * pitch_acc;
   roll_est  = CF_ALPHA * (roll_est  + gx_dps * dt) + (1.0f - CF_ALPHA) * roll_acc;
@@ -362,6 +388,63 @@ void pollIMUAndUpdatePitch() {
 
   // 6) Map pitch->freq
   if (baseFreq > 0) {
-    float norm = (pitch_est - PITCH_MIN_DEG) / (PITCH_MAX_DEG - PITCH_MAX_DEG + PITCH_MIN_DEG - PITCH_MIN_DEG);
-    // The above looked odd; correct clamp with direct range:
-    norm = (pitch_est - PITCH_MIN_DEG) / (PITCH_MAX_D
+    float norm = (pitch_est - PITCH_MIN_DEG) / (PITCH_MAX_DEG - PITCH_MIN_DEG);
+    if (norm < 0.0f) norm = 0.0f;
+    if (norm > 1.0f) norm = 1.0f;
+
+    float semi_cont = norm * TILT_RANGE_SEMITONES;
+    int   semi_disc = quantizeWithHys(semi_cont);
+    float f = (float)baseFreq * powf(2.0f, semi_disc / 12.0f);
+    if (f < 50.0f)   f = 50.0f;
+    if (f > 4000.0f) f = 4000.0f;
+    targetFreqHz = (int)f;
+  } else {
+    targetFreqHz = 0;
+  }
+
+  // 7) Vibrato suggestion from roll (simple bucket -> Hz)
+  float roll_deg = roll_est;
+  if (roll_deg < 0.0f)  roll_deg = 0.0f;
+  if (roll_deg > 90.0f) roll_deg = 90.0f;
+  int vibLevel;
+  if      (roll_deg < 15.0f) vibLevel = 0;
+  else if (roll_deg < 35.0f) vibLevel = 1;
+  else if (roll_deg < 60.0f) vibLevel = 2;
+  else                       vibLevel = 3;
+  if (vibLevel != lastVibLevel) lastVibLevel = vibLevel;
+  float desiredVibRate = vibRates[lastVibLevel < 0 ? 0 : lastVibLevel];
+
+  // 8) ==== FSM CALL (drives play/stop/vibrato per your table) ====
+  const bool button = readButton();
+  // xRead = freq, yRead = vibRate, zRead = yaw
+  FS = updateFSM(FS, (float)targetFreqHz, desiredVibRate, yaw_deg, button, now);
+
+  // ---- Optional debug note print ----
+  if (targetFreqHz != lastAnnouncedHz) {
+    Serial.print(F("[note] -> "));
+    printHzAndNote(targetFreqHz);
+    Serial.println();
+    lastAnnouncedHz = targetFreqHz;
+  }
+}
+
+// ----- Hz -> musical note name (C, C#, ..., B) with octave -----
+static const char* NOTE12[12] =
+  {"C","C#","D","D#","E","F","F#","G","G#","A","A#","B"};
+
+static inline int hzToMidi(int hz) {
+  if (hz <= 0) return 0;
+  float n = 69.0f + 12.0f * (log((float)hz / 440.0f) / log(2.0f)); // A4=440 -> 69
+  return (int)lroundf(n);
+}
+
+static inline void printHzAndNote(int hz) {
+  int midi = hzToMidi(hz);
+  const char* name = NOTE12[(midi % 12 + 12) % 12];
+  int octave = midi / 12 - 1;
+  Serial.print(hz);
+  Serial.print(F(" Hz ("));
+  Serial.print(name);
+  Serial.print(octave);
+  Serial.print(')');
+}

@@ -13,4 +13,8 @@ typedef struct {
   unsigned long noteFrequency;
   unsigned long vibratoLevel;
   bool gestureModeOn;
-  unsigned long
+  unsigned long savedClock;
+  fsm_state state;
+} full_state;
+
+#endif

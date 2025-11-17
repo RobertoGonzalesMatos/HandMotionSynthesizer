@@ -57,4 +57,5 @@ void loop() {
   // - map Y-tilt -> target pitch (silently),
   // - map X-tilt -> vibrato amount,
   // - trigger playNote(curFreq) ONLY on Z-twist.
-  po
+  pollIMUAndUpdatePitch();
+}

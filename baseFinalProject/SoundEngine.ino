@@ -141,4 +141,5 @@ void noteISR() {
 
   R_GPT3->GTCR_b.CST = 1;
   R_ICU->IELSR_b[NOTE_INT].IR = 0;
-  NVIC_ClearPendingIR
+  NVIC_ClearPendingIRQ((IRQn_Type)NOTE_INT);
+}
