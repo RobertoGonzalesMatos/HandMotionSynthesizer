@@ -33,6 +33,7 @@ unsigned long    lastIMUms    = 0;
 const unsigned long IMU_DT_MS = 10;  // IMU update ~100 Hz
 
 // ===== Mapping & ranges =====
+// Same as working version
 const float PITCH_MIN_DEG = -30.0f;
 const float PITCH_MAX_DEG =  60.0f;
 const float TILT_RANGE_SEMITONES = 24.0f;
@@ -72,6 +73,9 @@ static float yaw_deg = 0.0f;
 static float yaw_bias_dps = 0.0f;
 const  float YAW_BIAS_ALPHA = 0.002f;
 const  float CALM_GZ_DPS    = 10.0f;
+
+// We only allow playing when yaw is near forward to act as a "gate".
+const  float PLAY_BAND_DEG  = 15.0f;      // ± yaw window, matches working code
 
 // ===== Audio state =====
 static bool  notePlaying  = false;
@@ -197,24 +201,25 @@ bool mpuReadRaw(int16_t &ax, int16_t &ay, int16_t &az,
 }
 
 // ===== Semitone quantization with hysteresis =====
+// Updated to match your working file: ±0.6 semitone band
 static int   lastSemi = 9999;
 static float semiEdgeLow  = -1e9f;
 static float semiEdgeHigh =  1e9f;
 
 static inline int quantizeWithHys(float semi_cont) {
-  if (lastSemi == 9999) {
+  if (lastSemi == 9999) { // first run: seed with current value
     lastSemi = (int)roundf(semi_cont);
-    semiEdgeLow  = lastSemi - 0.4f;
-    semiEdgeHigh = lastSemi + 0.4f;
+    semiEdgeLow  = lastSemi - 0.6f;   // hysteresis band ~1.2 semitones
+    semiEdgeHigh = lastSemi + 0.6f;
   }
   if (semi_cont < semiEdgeLow) {
     lastSemi--;
-    semiEdgeLow  = lastSemi - 0.4f;
-    semiEdgeHigh = lastSemi + 0.4f;
+    semiEdgeLow  = lastSemi - 0.6f;
+    semiEdgeHigh = lastSemi + 0.6f;
   } else if (semi_cont > semiEdgeHigh) {
     lastSemi++;
-    semiEdgeLow  = lastSemi - 0.4f;
-    semiEdgeHigh = lastSemi + 0.4f;
+    semiEdgeLow  = lastSemi - 0.6f;
+    semiEdgeHigh = lastSemi + 0.6f;
   }
   return lastSemi;
 }
@@ -229,11 +234,10 @@ full_state updateFSM(full_state currState,
 
   switch (currState.state) {
     case s_INIT:
-      // 1-2: msg != NONE → noteFrequency = msg.frequency
-      // Treat targetFreqHz as "msg" and start note once we have a valid freq.
-      if (targetFreqHz > 0) {
+      // Start playing once we have a valid freq AND yaw is in the play band
+      if (xRead > 0.0f && fabsf(zRead) <= PLAY_BAND_DEG) {
         Serial.println(F("t 1–2: init → reg_calc (start note)"));
-        ret.noteFrequency = targetFreqHz;
+        ret.noteFrequency = (unsigned long)xRead;
 
         vibForceStop();
         curFreq = (int)ret.noteFrequency;
@@ -256,17 +260,19 @@ full_state updateFSM(full_state currState,
       break;
 
     case s_REG_WAIT:
-      // 3-2 (a): stop() if |zRead| >= 25  (use yaw as "stop twist")
-      if (fiveMs && !buttonOn && fabsf(zRead) >= 25.0f) {
-        Serial.println(F("t 3–2a: stop()"));
+      // Silence condition: yaw out of band OR no valid freq → stop.
+      if (fiveMs && !buttonOn &&
+          (fabsf(zRead) > PLAY_BAND_DEG || xRead <= 0.0f)) {
+        Serial.println(F("t 3–2a: stop() (yaw out-of-band or no freq)"));
         doStop();
         ret.savedClock = clock;
         ret.state = s_REG_CALC;
         break;
       }
 
-      // NEW: If we're silent but have a valid freq, start playing
-      if (fiveMs && !buttonOn && !notePlaying && xRead > 0.0f) {
+      // Start playing if we are silent, have a freq, and yaw is in band
+      if (fiveMs && !buttonOn && !notePlaying &&
+          xRead > 0.0f && fabsf(zRead) <= PLAY_BAND_DEG) {
         Serial.println(F("t 3–2: start note (was silent)"));
         vibForceStop();
         ret.noteFrequency = (unsigned long)xRead;
@@ -278,8 +284,8 @@ full_state updateFSM(full_state currState,
         break;
       }
 
-      // 3-2 (b): vibrato() if yRead > 0 → vibratoAmount = yRead
-      if (fiveMs && !buttonOn && yRead > 0.0f) {
+      // Apply vibrato if we are playing and yRead > 0
+      if (fiveMs && !buttonOn && notePlaying && yRead > 0.0f) {
         Serial.println(F("t 3–2b: vibrato()"));
         vibApply(yRead);
         ret.vibratoLevel = (unsigned long)yRead;
@@ -289,19 +295,22 @@ full_state updateFSM(full_state currState,
         break;
       }
 
-      // 3-2 (c): playNote() if xRead != noteFrequency → noteFrequency = xRead
+      // Retune if frequency changed significantly
       if (fiveMs && !buttonOn &&
           fabsf(xRead - (float)currState.noteFrequency) > 1.0f) {
         Serial.println(F("t 3–2c: playNote(retune)"));
         vibForceStop();
         ret.noteFrequency = (unsigned long)xRead;
-        if (ret.noteFrequency > 0) {
+
+        if (ret.noteFrequency > 0 && fabsf(zRead) <= PLAY_BAND_DEG) {
           curFreq = (int)ret.noteFrequency;
           playNote(curFreq);
           notePlaying = true;
         } else {
+          // If freq is invalid or yaw is out of band, we go silent
           doStop();
         }
+
         ret.savedClock = clock;
         ret.state = s_REG_CALC;
         break;
@@ -386,7 +395,7 @@ void pollIMUAndUpdatePitch() {
     yaw_bias_dps = (1.0f - YAW_BIAS_ALPHA) * yaw_bias_dps + YAW_BIAS_ALPHA * gz_dps;
   yaw_deg += (gz_dps - yaw_bias_dps) * dt;
 
-  // 6) Map pitch->freq
+  // 6) Map pitch->freq (same as working file)
   if (baseFreq > 0) {
     float norm = (pitch_est - PITCH_MIN_DEG) / (PITCH_MAX_DEG - PITCH_MIN_DEG);
     if (norm < 0.0f) norm = 0.0f;
@@ -402,7 +411,7 @@ void pollIMUAndUpdatePitch() {
     targetFreqHz = 0;
   }
 
-  // 7) Vibrato suggestion from roll (simple bucket -> Hz)
+  // 7) Vibrato suggestion from roll (bucket -> Hz)
   float roll_deg = roll_est;
   if (roll_deg < 0.0f)  roll_deg = 0.0f;
   if (roll_deg > 90.0f) roll_deg = 90.0f;
