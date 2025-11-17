@@ -1,3 +1,5 @@
+#include "SoundEngine.h"
+
 const int CLOCKFREQ      = 3000000;
 const unsigned int TIMER_INT = 31;
 const unsigned int NOTE_INT  = 29;

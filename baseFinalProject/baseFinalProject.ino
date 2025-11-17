@@ -1,4 +1,5 @@
 #include <math.h>
+#include "SoundEngine.h"
 
 extern int   curFreq;
 extern int   baseFreq;
