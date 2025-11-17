@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Arduino Piano 🎹</title>
+</head>
+<link rel="stylesheet" href="style.css">
+<body>
+    <header>
+        <h1>Motion-based Synthesizer</h1>
+        <button id="connect">🔌 Connect to Arduino</button><br><br>
+    </header>
+
+    <section id ="piano-container">
+        <div id="piano">
+            <!-- White keys -->
+            <div class="key white" data-note="C">C</div>
+            <div class="key white" data-note="D">D</div>
+            <div class="key white" data-note="E">E</div>
+            <div class="key white" data-note="F">F</div>
+            <div class="key white" data-note="G">G</div>
+            <div class="key white" data-note="A">A</div>
+            <div class="key white" data-note="B">B</div>
+
+            <!-- Black keys -->
+            <div class="key black" data-note="C#"></div>
+            <div class="key black" data-note="D#"></div>
+            <div class="key black" data-note="F#"></div>
+            <div class="key black" data-note="G#"></div>
+            <div class="key black" data-note="A#"></div>
+        </div>
+    </section>
+
+    <section id="modes-container">
+        <h2>Modes</h2>
+        <p>Select different modes to change the sound and behavior of the synthesizer.</p>
+        <button id="drum">Drum Mode</button>
+
+    </section>
+
+
+
+  <pre id="log"></pre>
+
+  <script>
+    let port, writer;
+    const log = document.getElementById("log");
+
+    document.getElementById("connect").onclick = async () => {
+        try {
+            port = await navigator.serial.requestPort();
+            await port.open({ baudRate: 9600 });
+            writer = port.writable.getWriter();
+            log.textContent += "Connected to Arduino!\n";
+        } catch (error) {
+            console.error("Connection failed:", error);
+            log.textContent += `Error: ${error.message}\n`;
+    }
+    };
+
+    document.querySelectorAll(".key").forEach(key => {
+      key.onclick = () => sendNote(key.dataset.note);
+    });
+
+    async function sendNote(note) {
+      if (!writer) {
+        log.textContent += "Please connect first.\n";
+        return;
+      }
+      await writer.write(new TextEncoder().encode(note));
+      log.textContent += `Played note: ${note}\n`;
+    }
+  </script>
+</body>
+</html>

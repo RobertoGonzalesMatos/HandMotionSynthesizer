@@ -1,0 +1,72 @@
+ body { 
+    font-family: 'Courier New', Courier, monospace; 
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center; 
+    margin-top: 2em; 
+    }
+
+#piano {
+    position: relative;
+    display: flex;
+    margin-top: 20px;
+    }
+
+.key.white {
+    width: 60px;
+    height: 200px;
+    background: white;
+    border: 1px solid black;
+    box-sizing: border-box;
+    border-radius: 0 0 5px 5px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    margin: 0; /* No spacing between keys */
+    position: relative;
+    z-index: 1;
+    cursor: pointer;
+    }
+
+.key.white:active { 
+    background: #eaeaea;
+    }
+
+.key.black {
+    width: 40px;
+    height: 120px;
+    background: black;
+    position: absolute;
+    top: 0;
+    border-radius: 0 0 3px 3px;
+    z-index: 2;
+    cursor: pointer;
+}
+.key.black:active {
+    background: #383838;
+    }
+
+.key.black[data-note="C#"] { left: 40px; }
+.key.black[data-note="D#"] { left: 100px; }
+.key.black[data-note="F#"] { left: 220px; }
+.key.black[data-note="G#"] { left: 280px; }
+.key.black[data-note="A#"] { left: 340px; }
+
+#connect { margin-bottom: 20px; padding: 10px 20px; font-size: 18px; }
+
+#drum {
+    width: 100px;
+    height: 50px;
+    background: #f3f2f0;
+    border: 2px solid #000000;
+    border-radius: 5px;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    cursor: pointer;
+    margin: 10px;
+}
+#drum:active {
+    background: #d1cfcf;
+}

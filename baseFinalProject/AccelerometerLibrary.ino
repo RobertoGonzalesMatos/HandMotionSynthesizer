@@ -34,7 +34,7 @@ const unsigned long IMU_DT_MS = 10;  // IMU update ~100 Hz
 
 // ===== Mapping & ranges =====
 // Same as working version
-const float PITCH_MIN_DEG = -30.0f;
+const float PITCH_MIN_DEG = -60.0f;
 const float PITCH_MAX_DEG =  60.0f;
 const float TILT_RANGE_SEMITONES = 24.0f;
 
@@ -437,7 +437,6 @@ void pollIMUAndUpdatePitch() {
   }
 }
 
-// ----- Hz -> musical note name (C, C#, ..., B) with octave -----
 static const char* NOTE12[12] =
   {"C","C#","D","D#","E","F","F#","G","G#","A","A#","B"};
 
