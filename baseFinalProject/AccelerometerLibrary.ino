@@ -196,17 +196,17 @@ static float semiEdgeHigh =  1e9f;
 static inline int quantizeWithHys(float semi_cont) {
   if (lastSemi == 9999) { // first run: seed with current value
     lastSemi = (int)roundf(semi_cont);
-    semiEdgeLow  = lastSemi - 0.4f;   // hysteresis band ~0.8 semitone wide
-    semiEdgeHigh = lastSemi + 0.4f;
+    semiEdgeLow  = lastSemi - 0.6f;   // hysteresis band ~0.8 semitone wide
+    semiEdgeHigh = lastSemi + 0.6f;
   }
   if (semi_cont < semiEdgeLow) {
     lastSemi--;
-    semiEdgeLow  = lastSemi - 0.4f;
-    semiEdgeHigh = lastSemi + 0.4f;
+    semiEdgeLow  = lastSemi - 0.6f;
+    semiEdgeHigh = lastSemi + 0.6f;
   } else if (semi_cont > semiEdgeHigh) {
     lastSemi++;
-    semiEdgeLow  = lastSemi - 0.4f;
-    semiEdgeHigh = lastSemi + 0.4f;
+    semiEdgeLow  = lastSemi - 0.6f;
+    semiEdgeHigh = lastSemi + 0.6f;
   }
   return lastSemi;
 }
