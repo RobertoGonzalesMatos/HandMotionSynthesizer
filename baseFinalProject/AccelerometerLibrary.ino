@@ -94,9 +94,9 @@ static inline void vibApply(float rateHz) {
     }
   } else {
     if (!vibActive || fabsf(rateHz - vibCurrentRateHz) > 0.05f) {
-      setVibrato(rateHz);
+      setVibrato(rateHz*2);
       vibActive = true;
-      vibCurrentRateHz = rateHz;
+      vibCurrentRateHz = rateHz*2;
     }
   }
 }
@@ -238,7 +238,6 @@ full_state updateFSM(full_state currState,
       if (xRead > 0.0f && fabsf(zRead) <= PLAY_BAND_DEG) {
         Serial.println(F("t 1–2: init → reg_calc (start note)"));
         ret.noteFrequency = (unsigned long)xRead;
-
         vibForceStop();
         curFreq = (int)ret.noteFrequency;
         playNote(curFreq);

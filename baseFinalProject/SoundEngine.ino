@@ -5,11 +5,14 @@ const unsigned int TIMER_INT = 31;
 const unsigned int NOTE_INT  = 29;
 const int OUT_PORT = 1;
 const int OUT_PIN  = 6;
+const int sampleRate = 20000;
+int freq1 = 0;
+int vibOffset = 0;
 
 int   curFreq        = 0; 
 int   baseFreq       = 0; 
 
-const int VIB_DEPTH_HZ = 5;
+const float VIB_DEPTH_HZ = 10;
 const float VIB_RATE_HZ  = 6.0f;
 
 void gptISR();
@@ -44,7 +47,7 @@ void initGPT() {
   R_GPT2->GTSSR = (1 << R_GPT0_GTSSR_CSTRT_Pos);
   R_GPT2->GTPSR = (1 << R_GPT0_GTPSR_CSTOP_Pos);
   R_GPT2->GTCR  = 0b010 << 24;   
-
+  R_GPT2->GTPR = CLOCKFREQ / sampleRate;
 
   R_PFS->PORT[OUT_PORT].PIN[OUT_PIN].PmnPFS_b.PDR = 1;
 
@@ -63,10 +66,11 @@ void playNote(int freq) {
   R_GPT2->GTCR_b.CST = 0;
 
 #ifdef SINUSOID
-  R_GPT2->GTPR = CLOCKFREQ / (16.0 * freq);
+  // R_GPT2->GTPR = CLOCKFREQ / (16.0 * freq);
 #else
-  R_GPT2->GTPR = CLOCKFREQ / (2.0 * freq);
+  // R_GPT2->GTPR = CLOCKFREQ / (2.0 * freq);
 #endif
+  freq1 = freq;
 
   R_ICU->IELSR[TIMER_INT] = (0x06d << R_ICU_IELSR_IELS_Pos);
 
@@ -80,7 +84,16 @@ void stopPlay() {
 }
 
 void gptISR() {
-  R_PFS->PORT[OUT_PORT].PIN[OUT_PIN].PmnPFS_b.PODR ^= 1;
+  static uint32_t c1 = 0, c2 = 0;
+  static uint8_t s1 = 0, s2 = 0;
+  uint32_t p1 = (freq1 > 0) ? sampleRate / (freq1 * 2) : 0;
+  uint32_t p2 = ((freq1+30) > 0) ? sampleRate / ((freq1+30) * 2) : 0;
+  if (p1 && ++c1 >= p1) { c1 = 0; s1 ^= 1; }
+  if (p2 && ++c2 >= p2) { c2 = 0; s2 ^= 1; }
+  uint8_t out = s1 ^ s2;
+  R_PFS->PORT[OUT_PORT].PIN[OUT_PIN].PmnPFS_b.PODR = out;
+
+  // R_PFS->PORT[OUT_PORT].PIN[OUT_PIN].PmnPFS_b.PODR ^= 1;
   R_GPT2->GTCR_b.CST = 1;
   R_ICU->IELSR_b[TIMER_INT].IR = 0;
   NVIC_ClearPendingIRQ((IRQn_Type)TIMER_INT);
