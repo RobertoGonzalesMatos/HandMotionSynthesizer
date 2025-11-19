@@ -87,10 +87,12 @@ void gptISR() {
   static uint32_t c1 = 0, c2 = 0;
   static uint8_t s1 = 0, s2 = 0;
   uint32_t p1 = (freq1 > 0) ? sampleRate / (freq1 * 2) : 0;
-  uint32_t p2 = ((freq1+30) > 0) ? sampleRate / ((freq1+30) * 2) : 0;
+  float freq2 = pow(2, 1.0/3.0) * freq1;
+  freq2 = 0;
+  uint32_t p2 = (freq2 > 0) ? sampleRate / (freq2 * 2) : 0;
   if (p1 && ++c1 >= p1) { c1 = 0; s1 ^= 1; }
   if (p2 && ++c2 >= p2) { c2 = 0; s2 ^= 1; }
-  uint8_t out = s1 ^ s2;
+  uint8_t out = s1;
   R_PFS->PORT[OUT_PORT].PIN[OUT_PIN].PmnPFS_b.PODR = out;
 
   // R_PFS->PORT[OUT_PORT].PIN[OUT_PIN].PmnPFS_b.PODR ^= 1;
