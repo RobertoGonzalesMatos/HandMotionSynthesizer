@@ -21,6 +21,7 @@ void setup() {
   
   initGPT();
   mpuInit();
+  harmonyInit();
 }
 
 void loop() {
@@ -71,6 +72,9 @@ void loop() {
     }
     }
   }
+
+  // Update harmony controls + associated variables
+  updateHaromnyControls();
 
   // Service playback if active
   servicePlaybackTick();
