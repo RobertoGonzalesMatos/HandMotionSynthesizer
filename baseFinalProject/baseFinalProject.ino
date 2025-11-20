@@ -18,7 +18,7 @@ extern void setVibrato(float vibRateHz);
 void setup() {
   Serial.begin(9600);
   while (!Serial) {}
-
+  
   initGPT();
   mpuInit();
 }
