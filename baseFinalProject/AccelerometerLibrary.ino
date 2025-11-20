@@ -13,6 +13,7 @@ extern void stopPlay();
 extern void stopVibrato();
 extern void setVibrato(float vibRateHz);
 extern int  curFreq;
+extern int drumMode;
 
 static int lastAnnouncedHz = -1;
 
@@ -85,6 +86,27 @@ static int   targetFreqHz = 0;
 static bool  vibActive        = false;
 static float vibCurrentRateHz = 0.0f;
 
+// ===== Recording / Playback state =====
+struct NoteEvent {
+  int           freq;      // 0 => silence
+  unsigned long duration;  // in ms
+};
+
+static const int MAX_EVENTS = 128;
+static NoteEvent recBuf[MAX_EVENTS];
+static int       recCount = 0;
+
+static bool      recActive      = false;
+static bool      playbackActive = false;
+
+static int       lastRecFreq    = -1;     // last freq we stored/are timing
+static unsigned long lastChangeMs = 0;    // when lastRecFreq started
+
+// Playback cursor
+static int       playIndex         = 0;
+static unsigned long playEventStartMs = 0;
+
+
 static inline void vibApply(float rateHz) {
   if (rateHz < 0.1f) {
     if (vibActive) {
@@ -116,6 +138,10 @@ static inline void doStop() {
   }
   vibForceStop();
 }
+
+bool isRecording()    { return recActive; }
+bool isPlayingBack()  { return playbackActive; }
+
 
 // ===== Stubs you can wire to hardware =====
 #ifndef BUTTON_PIN
@@ -250,7 +276,7 @@ full_state updateFSM(full_state currState,
 
     case s_REG_CALC:
       // 2-3: (clock - savedClock) >= 5 ∧ ¬buttonOn
-      if (fiveMs && !buttonOn) {
+      if (fiveMs && !drumMode) {
         Serial.println(F("t 2–3: reg_calc → reg_wait"));
         pet_watchdog();
         ret.savedClock = clock;
@@ -260,7 +286,7 @@ full_state updateFSM(full_state currState,
 
     case s_REG_WAIT:
       // Silence condition: yaw out of band OR no valid freq → stop.
-      if (fiveMs && !buttonOn &&
+      if (fiveMs && !drumMode &&
           (fabsf(zRead) > PLAY_BAND_DEG || xRead <= 0.0f)) {
         Serial.println(F("t 3–2a: stop() (yaw out-of-band or no freq)"));
         doStop();
@@ -270,7 +296,7 @@ full_state updateFSM(full_state currState,
       }
 
       // Start playing if we are silent, have a freq, and yaw is in band
-      if (fiveMs && !buttonOn && !notePlaying &&
+      if (fiveMs && !drumMode && !notePlaying &&
           xRead > 0.0f && fabsf(zRead) <= PLAY_BAND_DEG) {
         Serial.println(F("t 3–2: start note (was silent)"));
         vibForceStop();
@@ -284,7 +310,7 @@ full_state updateFSM(full_state currState,
       }
 
       // Apply vibrato if we are playing and yRead > 0
-      if (fiveMs && !buttonOn && notePlaying && yRead > 0.0f) {
+      if (fiveMs && !drumMode && notePlaying && yRead > 0.0f) {
         Serial.println(F("t 3–2b: vibrato()"));
         vibApply(yRead);
         ret.vibratoLevel = (unsigned long)yRead;
@@ -295,7 +321,7 @@ full_state updateFSM(full_state currState,
       }
 
       // Retune if frequency changed significantly
-      if (fiveMs && !buttonOn &&
+      if (fiveMs && !drumMode &&
           fabsf(xRead - (float)currState.noteFrequency) > 1.0f) {
         Serial.println(F("t 3–2c: playNote(retune)"));
         vibForceStop();
@@ -316,7 +342,7 @@ full_state updateFSM(full_state currState,
       }
 
       // 3-4: toggle to Drum Mode
-      if (buttonOn && !currState.gestureModeOn) {
+      if (drumMode && !currState.gestureModeOn) {
         Serial.println(F("t 3–4: You are in Drum Mode!"));
         ret.gestureModeOn = true;
         ret.state = s_GESTURE_WAIT;
@@ -325,14 +351,14 @@ full_state updateFSM(full_state currState,
 
     case s_GESTURE_WAIT:
       // 4-3: toggle back to Regular Mode
-      if (buttonOn && currState.gestureModeOn) {
+      if (drumMode && currState.gestureModeOn) {
         Serial.println(F("t 4–3: You are in Regular Mode!"));
         ret.gestureModeOn = false;
         ret.state = s_REG_WAIT;
         break;
       }
       // 4-5 (a..f): gesture hits; placeholders for now
-      if (fiveMs && !buttonOn) {
+      if (fiveMs && !drumMode) {
         if (xRead < -25.0f) { Serial.println(F("Kick!"));   ret.state = s_GESTURE_CALC; ret.savedClock = clock; break; }
         if (xRead >  25.0f) { Serial.println(F("Snare!"));  ret.state = s_GESTURE_CALC; ret.savedClock = clock; break; }
         if (yRead >  25.0f) { Serial.println(F("Tom!"));    ret.state = s_GESTURE_CALC; ret.savedClock = clock; break; }
@@ -344,7 +370,7 @@ full_state updateFSM(full_state currState,
 
     case s_GESTURE_CALC:
       // 5-4: wait 5ms then return to gesture wait
-      if (fiveMs && !buttonOn) {
+      if (fiveMs && !drumMode) {
         Serial.println(F("t 5–4: back to gesture wait"));
         pet_watchdog();
         ret.savedClock = clock;
@@ -358,6 +384,9 @@ full_state updateFSM(full_state currState,
 
 // ===== Main polling function: read IMU, update orientation, call FSM =====
 void pollIMUAndUpdatePitch() {
+  if (playbackActive) {
+    return;
+  }
   unsigned long now = millis();
   if (now - lastIMUms < IMU_DT_MS) return; // ~100 Hz
   lastIMUms = now;
@@ -424,15 +453,40 @@ void pollIMUAndUpdatePitch() {
 
   // 8) ==== FSM CALL (drives play/stop/vibrato per your table) ====
   const bool button = readButton();
-  // xRead = freq, yRead = vibRate, zRead = yaw
-  FS = updateFSM(FS, (float)targetFreqHz, desiredVibRate, yaw_deg, button, now);
 
-  // ---- Optional debug note print ----
+  // xRead = freq, yRead = vibRate, zRead = yaw
+  FS = updateFSM(FS, (float)targetFreqHz, desiredVibRate, yaw_deg, drumMode, now);
+
+  // ---- Optional debug note print (what the IMU is asking for) ----
   if (targetFreqHz != lastAnnouncedHz) {
     Serial.print(F("[note] -> "));
     printHzAndNote(targetFreqHz);
     Serial.println();
     lastAnnouncedHz = targetFreqHz;
+  }
+
+  // 9) ==== Recording logic: record EFFECTIVE freq (played or silence) ====
+  if (recActive) {
+    int effectiveFreq = (notePlaying ? curFreq : 0);  // 0 == silence
+
+    if (lastRecFreq == -1) {
+      // First sample
+      lastRecFreq   = effectiveFreq;
+      lastChangeMs  = now;
+    } else if (effectiveFreq != lastRecFreq) {
+      // Close previous event
+      if (recCount < MAX_EVENTS) {
+        unsigned long dur = now - lastChangeMs;
+        if (dur > 0) {
+          recBuf[recCount].freq     = lastRecFreq;
+          recBuf[recCount].duration = dur;
+          recCount++;
+        }
+      }
+      // Start new event
+      lastRecFreq  = effectiveFreq;
+      lastChangeMs = now;
+    }
   }
 }
 
@@ -455,3 +509,120 @@ static inline void printHzAndNote(int hz) {
   Serial.print(octave);
   Serial.print(')');
 }
+
+
+//recording
+
+
+void stopRecording() {
+  if (!recActive) return;
+  recActive = false;
+
+  unsigned long now = millis();
+  if (lastRecFreq != -1 && recCount < MAX_EVENTS) {
+    unsigned long dur = now - lastChangeMs;
+    if (dur > 0) {
+      recBuf[recCount].freq     = lastRecFreq;
+      recBuf[recCount].duration = dur;
+      recCount++;
+    }
+  }
+  Serial.print(F("[REC] stopped, events="));
+  Serial.println(recCount);
+}
+
+void startRecording() {
+  // If we were playing back, stop that first
+  if (playbackActive) {
+    stopPlayback();
+  }
+
+  // Clear buffer
+  recCount     = 0;
+  lastRecFreq  = -1;
+  lastChangeMs = millis();
+
+  recActive      = true;
+  playbackActive = false;
+
+  Serial.println(F("[REC] started"));
+}
+
+void stopPlayback() {
+  if (!playbackActive) return;
+  playbackActive = false;
+
+  // Silence output
+  doStop();
+  curFreq = 0;
+
+  Serial.println(F("[PLAY] stopped"));
+}
+
+void startPlayback() {
+  // Finish recording if we were in record mode
+  if (recActive) {
+    stopRecording();
+  }
+
+  if (recCount == 0) {
+    Serial.println(F("[PLAY] no events to play"));
+    return;
+  }
+
+  // Reset playback cursor
+  playIndex        = 0;
+  playEventStartMs = millis();
+  playbackActive   = true;
+
+  Serial.print(F("[PLAY] starting, events="));
+  Serial.println(recCount);
+}
+
+void servicePlaybackTick() {
+  if (!playbackActive) return;
+
+  unsigned long now = millis();
+
+  if (playIndex >= recCount) {
+    // Finished
+    stopPlayback();
+    return;
+  }
+
+  NoteEvent &ev = recBuf[playIndex];
+
+  // If this is the first time for this event, or we just advanced, ensure correct note
+  int f = ev.freq;
+
+  if (f <= 0) {
+    // Silence event
+    if (notePlaying || curFreq != 0) {
+      stopPlay();
+      vibForceStop();
+      curFreq     = 0;
+      notePlaying = false;
+    }
+  } else {
+    if (!notePlaying || curFreq != f) {
+      vibForceStop();   // keep playback “clean”, no leftover vibrato state
+      curFreq     = f;
+      playNote(curFreq);
+      notePlaying = true;
+    }
+  }
+
+  // Check duration
+  unsigned long elapsed = now - playEventStartMs;
+  if (elapsed >= ev.duration) {
+    // Move to next event
+    playIndex++;
+    playEventStartMs = now;
+
+    if (playIndex >= recCount) {
+      stopPlayback();
+      return;
+    }
+  }
+}
+

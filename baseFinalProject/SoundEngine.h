@@ -17,4 +17,13 @@ typedef struct {
   fsm_state state;
 } full_state;
 
+void startRecording();      
+void stopRecording();      
+void startPlayback();       
+void stopPlayback();        
+void servicePlaybackTick();
+bool isRecording();         
+bool isPlayingBack();
+
 #endif
+
