@@ -7,8 +7,8 @@ const unsigned int HARMONY_INT2 = 31;
 const unsigned int HARMONY_INT3 = 28;
 const unsigned int NOTE_INT  = 29;
 const int OUT_PORT = 1;
-const int OUT_PIN  = 5;
-const int OUT_PIN1 = 6;
+const int OUT_PIN  = 6;
+const int OUT_PIN1 = 5;
 const int OUT_PIN2 = 7;
 const int OUT_PIN3 = 11;
 
@@ -106,9 +106,9 @@ void initGPT() {
 
 void playNote(int freq) {
   R_GPT2->GTCR_b.CST = 0;
-  R_GPT4->GTCR_b.CST = 0;
-  R_GPT5->GTCR_b.CST = 0;
-  R_GPT6->GTCR_b.CST = 0;
+  // R_GPT4->GTCR_b.CST = 0;
+  // R_GPT5->GTCR_b.CST = 0;
+  // R_GPT6->GTCR_b.CST = 0;
 
   int harmony = freq * pow(2, 4.0/12.0);
   int harmony2 = freq * pow(2, 7.0/12.0);
@@ -116,26 +116,26 @@ void playNote(int freq) {
 
 #ifdef SINUSOID
   R_GPT2->GTPR = CLOCKFREQ / (16.0 * freq);
-  R_GPT4->GTPR = CLOCKFREQ / (16.0 * harmony);
-  R_GPT5->GTPR = CLOCKFREQ / (16.0 * harmony2);
-  R_GPT6->GTPR = CLOCKFREQ / (16.0 * harmony3);
+  // R_GPT4->GTPR = CLOCKFREQ / (16.0 * harmony);
+  // R_GPT5->GTPR = CLOCKFREQ / (16.0 * harmony2);
+  // R_GPT6->GTPR = CLOCKFREQ / (16.0 * harmony3);
 #else
   R_GPT2->GTPR = CLOCKFREQ / (2.0 * freq);
-  R_GPT4->GTPR = CLOCKFREQ / (2.0 * harmony);
-  R_GPT5->GTPR = CLOCKFREQ / (2.0 * harmony2);
-  R_GPT6->GTPR = CLOCKFREQ / (2.0 * harmony3);
+  // R_GPT4->GTPR = CLOCKFREQ / (2.0 * harmony);
+  // R_GPT5->GTPR = CLOCKFREQ / (2.0 * harmony2);
+  // R_GPT6->GTPR = CLOCKFREQ / (2.0 * harmony3);
 #endif
 
   R_ICU->IELSR[TIMER_INT] = (0x06d << R_ICU_IELSR_IELS_Pos);
-  R_ICU->IELSR[HARMONY_INT] = (0x07d << R_ICU_IELSR_IELS_Pos);
-  R_ICU->IELSR[HARMONY_INT2] = (0x085 << R_ICU_IELSR_IELS_Pos);
-  R_ICU->IELSR[HARMONY_INT3] = (0x08d << R_ICU_IELSR_IELS_Pos);
+  // R_ICU->IELSR[HARMONY_INT] = (0x07d << R_ICU_IELSR_IELS_Pos);
+  // R_ICU->IELSR[HARMONY_INT2] = (0x085 << R_ICU_IELSR_IELS_Pos);
+  // R_ICU->IELSR[HARMONY_INT3] = (0x08d << R_ICU_IELSR_IELS_Pos);
 
 
   R_GPT2->GTCR_b.CST = 1;
-  R_GPT4->GTCR_b.CST = 1;
-  R_GPT5->GTCR_b.CST = 1;
-  R_GPT6->GTCR_b.CST = 1;
+  // R_GPT4->GTCR_b.CST = 1;
+  // R_GPT5->GTCR_b.CST = 1;
+  // R_GPT6->GTCR_b.CST = 1;
 }
 
 void stopPlay() {
