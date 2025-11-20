@@ -1,72 +1,151 @@
- body { 
-    font-family: 'Courier New', Courier, monospace; 
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center; 
-    margin-top: 2em; 
-    }
+body {
+  font-family: "Inter", sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-top: 2em;
+  min-height: 100vh;
+
+  /* Combined gradient + image */
+  background: linear-gradient(
+      135deg,
+      rgba(238, 241, 247, 0.6),
+      rgba(185, 209, 245, 0.6)
+    ),
+    url("background.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+header {
+  font-size: 1.5rem;
+  background: linear-gradient(90deg, #6a11cb, #2575fc);
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  transition: text-shadow 0.3s ease, color 0.3s ease;
+}
 
 #piano {
-    position: relative;
-    display: flex;
-    margin-top: 20px;
-    }
+  position: relative;
+  display: flex;
+  margin-top: 20px;
+}
 
 .key.white {
-    width: 60px;
-    height: 200px;
-    background: white;
-    border: 1px solid black;
-    box-sizing: border-box;
-    border-radius: 0 0 5px 5px;
-    display: flex;
-    align-items: flex-end;
-    justify-content: center;
-    margin: 0; /* No spacing between keys */
-    position: relative;
-    z-index: 1;
-    cursor: pointer;
-    }
+  width: 65px;
+  height: 220px;
+  background: #ffffff;
+  border: 0.5px solid #d0d0d0;
+  border-radius: 0 0 10px 10px;
+  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
+  margin: 0;
+  display: flex;
+  justify-content: center;
+  cursor: pointer;
+  align-items: flex-end;
+  padding-bottom: 10px;
+  font-size: 0.9rem;
+  color: #333;
+}
 
-.key.white:active { 
-    background: #eaeaea;
-    }
+.key.white:active {
+  background: #eaeaea;
+}
 
 .key.black {
-    width: 40px;
-    height: 120px;
-    background: black;
-    position: absolute;
-    top: 0;
-    border-radius: 0 0 3px 3px;
-    z-index: 2;
-    cursor: pointer;
+  width: 32px;
+  height: 130px;
+  background: black;
+  position: absolute;
+  top: 0;
+  border-radius: 0 0 3px 3px;
+  box-shadow: 0 5px 6px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
 }
 .key.black:active {
-    background: #383838;
-    }
+  background: #383838;
+}
 
-.key.black[data-note="C#"] { left: 40px; }
-.key.black[data-note="D#"] { left: 100px; }
-.key.black[data-note="F#"] { left: 220px; }
-.key.black[data-note="G#"] { left: 280px; }
-.key.black[data-note="A#"] { left: 340px; }
+.key.black[data-note="C#"] {
+  left: 50px;
+}
+.key.black[data-note="D#"] {
+  left: 118px;
+}
+.key.black[data-note="F#"] {
+  left: 250px;
+}
+.key.black[data-note="G#"] {
+  left: 315px;
+}
+.key.black[data-note="A#"] {
+  left: 380px;
+}
 
-#connect { margin-bottom: 20px; padding: 10px 20px; font-size: 18px; }
+#connect {
+  padding: 14px 26px;
+  border-radius: 12px;
+  border: none;
+  font-size: 1rem;
+  background: #5b65f7;
+  color: white;
+  cursor: pointer;
+  font-weight: 600;
+  transition: 0.25s ease;
+  box-shadow: 15px 10px 10px rgba(0, 0, 0, 0.2);
+}
+
+#connect:active {
+  background: #a7acf6;
+}
 
 #drum {
-    width: 100px;
-    height: 50px;
-    background: #f3f2f0;
-    border: 2px solid #000000;
-    border-radius: 5px;
-    align-items: center;
-    justify-content: center;
-    font-weight: bold;
-    cursor: pointer;
-    margin: 10px;
+  padding: 14px 26px;
+  border-radius: 12px;
+  border: none;
+  font-size: 1rem;
+  background: #5b65f7;
+  color: white;
+  cursor: pointer;
+  font-weight: 600;
+  transition: 0.25s ease;
+  box-shadow: 15px 10px 10px rgba(0, 0, 0, 0.2);
 }
 #drum:active {
-    background: #d1cfcf;
+  background: #a7acf6;
+}
+
+#score-container {
+  text-align: center;
+  margin-top: 40px;
+}
+
+#score {
+  position: relative;
+  width: 300px;
+  height: 100px;
+  margin: 0 auto;
+}
+
+.staff-line {
+  width: 100%;
+  height: 2px;
+  background: black;
+  margin: 10px 0;
+}
+
+#note-head {
+  position: absolute;
+  left: 150px;
+  font-size: 32px;
+  transition: top 0.2s ease;
+}
+
+#treble-clef {
+  position: absolute;
+  left: 5px;
+  top: -15px;
+  height: 90px;
 }

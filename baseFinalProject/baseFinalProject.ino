@@ -3,6 +3,7 @@
 
 extern int   curFreq;
 extern int   baseFreq;
+extern int    drumMode;
 int keyToFreq(char c);
 
 extern void mpuInit();
@@ -64,6 +65,10 @@ void loop() {
         stopVibrato();
         continue;
       }
+    if (c == 'd') {        // Drum Mode on
+      drumMode = 1;
+      continue;
+    }
     }
   }
 
