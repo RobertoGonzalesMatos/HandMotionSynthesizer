@@ -2,12 +2,15 @@
 
 const int CLOCKFREQ      = 3000000;
 const unsigned int TIMER_INT = 30;
-const unsigned int HARMONY_INT = 31;
+const unsigned int HARMONY_INT = 28;
+const unsigned int HARMONY_INT2 = 31;
 const unsigned int NOTE_INT  = 29;
 const int OUT_PORT = 1;
 const int OUT_PIN  = 5;
 const int OUT_PORT1 = 1;
 const int OUT_PIN1 = 6;
+const int OUT_PORT2 = 1;
+const int OUT_PIN2 = 7;
 
 int   curFreq        = 0; 
 int   baseFreq       = 0; 
@@ -55,13 +58,21 @@ void initGPT() {
   R_GPT4->GTPSR = (1 << R_GPT0_GTPSR_CSTOP_Pos);
   R_GPT4->GTCR  = 0b010 << 24; 
 
+  // setup for gpt5 (harmony 2)
+  R_GPT5->GTCR_b.CST = 0;
+  R_GPT5->GTSSR = (1 << R_GPT0_GTSSR_CSTRT_Pos);
+  R_GPT5->GTPSR = (1 << R_GPT0_GTPSR_CSTOP_Pos);
+  R_GPT5->GTCR  = 0b010 << 24; 
+
 
   R_PFS->PORT[OUT_PORT].PIN[OUT_PIN].PmnPFS_b.PDR = 1;
   R_PFS->PORT[OUT_PORT1].PIN[OUT_PIN1].PmnPFS_b.PDR = 1;
+  R_PFS->PORT[OUT_PORT2].PIN[OUT_PIN2].PmnPFS_b.PDR = 1;
 
 
   R_ICU->IELSR[TIMER_INT] = 0;
   R_ICU->IELSR[HARMONY_INT] = 0;
+  R_ICU->IELSR[HARMONY_INT2] = 0;
 
 
   NVIC_SetVector((IRQn_Type)TIMER_INT, (uint32_t)&gptISR);
@@ -72,35 +83,51 @@ void initGPT() {
   NVIC_SetPriority((IRQn_Type)HARMONY_INT, 14);
   NVIC_EnableIRQ((IRQn_Type)HARMONY_INT);
 
+  NVIC_SetVector((IRQn_Type)HARMONY_INT2, (uint32_t)&gptISRHarmony2);
+  NVIC_SetPriority((IRQn_Type)HARMONY_INT2, 14);
+  NVIC_EnableIRQ((IRQn_Type)HARMONY_INT2);
+
   initNoteGPT();
 }
 
 void playNote(int freq) {
   R_GPT2->GTCR_b.CST = 0;
   R_GPT4->GTCR_b.CST = 0;
+  R_GPT5->GTCR_b.CST = 0;
+
+  int harmony = freq * pow(2, 4.0/12.0);
+  int harmony2 = freq * pow(2, 7.0/12.0);
 
 #ifdef SINUSOID
   R_GPT2->GTPR = CLOCKFREQ / (16.0 * freq);
-  R_GPT4->GTPR = CLOCKFREQ / (16.0 * (freq+136));
+  R_GPT4->GTPR = CLOCKFREQ / (16.0 * harmony);
+  R_GPT5->GTPR = CLOCKFREQ / (16.0 * harmony2);
 #else
   R_GPT2->GTPR = CLOCKFREQ / (2.0 * freq);
-  R_GPT4->GTPR = CLOCKFREQ / (2.0 * (freq+136));
+  R_GPT4->GTPR = CLOCKFREQ / (2.0 * harmony);
+  R_GPT5->GTPR = CLOCKFREQ / (2.0 * harmony2);
 #endif
 
   R_ICU->IELSR[TIMER_INT] = (0x06d << R_ICU_IELSR_IELS_Pos);
   R_ICU->IELSR[HARMONY_INT] = (0x07d << R_ICU_IELSR_IELS_Pos);
+  R_ICU->IELSR[HARMONY_INT2] = (0x085 << R_ICU_IELSR_IELS_Pos);
+
 
   R_GPT2->GTCR_b.CST = 1;
   R_GPT4->GTCR_b.CST = 1;
+  R_GPT5->GTCR_b.CST = 1;
 }
 
 void stopPlay() {
   R_GPT2->GTCR_b.CST = 0;
   R_GPT4->GTCR_b.CST = 0;
+  R_GPT5->GTCR_b.CST = 0;
   R_ICU->IELSR[TIMER_INT] = 0;
   R_ICU->IELSR[HARMONY_INT] = 0;
+  R_ICU->IELSR[HARMONY_INT2] = 0;
   R_PFS->PORT[OUT_PORT].PIN[OUT_PIN].PmnPFS_b.PODR = 0;
   R_PFS->PORT[OUT_PORT1].PIN[OUT_PIN1].PmnPFS_b.PODR = 0;
+  R_PFS->PORT[OUT_PORT2].PIN[OUT_PIN2].PmnPFS_b.PODR = 0;
 }
 
 void gptISR() {
@@ -115,6 +142,13 @@ void gptISRHarmony() {
   R_GPT4->GTCR_b.CST = 1;
   R_ICU->IELSR_b[HARMONY_INT].IR = 0;
   NVIC_ClearPendingIRQ((IRQn_Type)HARMONY_INT);
+}
+
+void gptISRHarmony2() {
+  R_PFS->PORT[OUT_PORT2].PIN[OUT_PIN2].PmnPFS_b.PODR ^= 1;
+  R_GPT5->GTCR_b.CST = 1;
+  R_ICU->IELSR_b[HARMONY_INT2].IR = 0;
+  NVIC_ClearPendingIRQ((IRQn_Type)HARMONY_INT2);
 }
 
 void initNoteGPT() {
