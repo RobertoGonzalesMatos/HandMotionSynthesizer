@@ -53,6 +53,7 @@ void loop() {
     }
     if (c == 'd') {        // Drum Mode on
       drumMode = 1;
+      playNote(440);
       continue;
     }
     // 'c' was unused; removed to keep behavior clean

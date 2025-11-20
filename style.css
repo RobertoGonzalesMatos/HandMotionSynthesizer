@@ -10,10 +10,10 @@ body {
   /* Combined gradient + image */
   background: linear-gradient(
       135deg,
-      rgba(238, 241, 247, 0.6),
-      rgba(185, 209, 245, 0.6)
+      rgba(180, 203, 250, 0.6),
+      rgba(201, 220, 248, 0.6)
     ),
-    url("background.png");
+    url('background.png') no-repeat center center fixed;
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
