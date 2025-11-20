@@ -13,6 +13,7 @@ extern void stopPlay();
 extern void stopVibrato();
 extern void setVibrato(float vibRateHz);
 extern int  curFreq;
+extern int drumMode;
 
 static int lastAnnouncedHz = -1;
 
@@ -251,7 +252,7 @@ full_state updateFSM(full_state currState,
 
     case s_REG_CALC:
       // 2-3: (clock - savedClock) >= 5 ∧ ¬buttonOn
-      if (fiveMs && !buttonOn) {
+      if (fiveMs && !drumMode) {
         Serial.println(F("t 2–3: reg_calc → reg_wait"));
         pet_watchdog();
         ret.savedClock = clock;
@@ -261,7 +262,7 @@ full_state updateFSM(full_state currState,
 
     case s_REG_WAIT:
       // Silence condition: yaw out of band OR no valid freq → stop.
-      if (fiveMs && !buttonOn &&
+      if (fiveMs && !drumMode &&
           (fabsf(zRead) > PLAY_BAND_DEG || xRead <= 0.0f)) {
         Serial.println(F("t 3–2a: stop() (yaw out-of-band or no freq)"));
         doStop();
@@ -271,7 +272,7 @@ full_state updateFSM(full_state currState,
       }
 
       // Start playing if we are silent, have a freq, and yaw is in band
-      if (fiveMs && !buttonOn && !notePlaying &&
+      if (fiveMs && !drumMode && !notePlaying &&
           xRead > 0.0f && fabsf(zRead) <= PLAY_BAND_DEG) {
         Serial.println(F("t 3–2: start note (was silent)"));
         vibForceStop();
@@ -285,7 +286,7 @@ full_state updateFSM(full_state currState,
       }
 
       // Apply vibrato if we are playing and yRead > 0
-      if (fiveMs && !buttonOn && notePlaying && yRead > 0.0f) {
+      if (fiveMs && !drumMode && notePlaying && yRead > 0.0f) {
         Serial.println(F("t 3–2b: vibrato()"));
         vibApply(yRead);
         ret.vibratoLevel = (unsigned long)yRead;
@@ -296,7 +297,7 @@ full_state updateFSM(full_state currState,
       }
 
       // Retune if frequency changed significantly
-      if (fiveMs && !buttonOn &&
+      if (fiveMs && !drumMode &&
           fabsf(xRead - (float)currState.noteFrequency) > 1.0f) {
         Serial.println(F("t 3–2c: playNote(retune)"));
         vibForceStop();
@@ -317,7 +318,7 @@ full_state updateFSM(full_state currState,
       }
 
       // 3-4: toggle to Drum Mode
-      if (buttonOn && !currState.gestureModeOn) {
+      if (drumMode && !currState.gestureModeOn) {
         Serial.println(F("t 3–4: You are in Drum Mode!"));
         ret.gestureModeOn = true;
         ret.state = s_GESTURE_WAIT;
@@ -326,14 +327,14 @@ full_state updateFSM(full_state currState,
 
     case s_GESTURE_WAIT:
       // 4-3: toggle back to Regular Mode
-      if (buttonOn && currState.gestureModeOn) {
+      if (drumMode && currState.gestureModeOn) {
         Serial.println(F("t 4–3: You are in Regular Mode!"));
         ret.gestureModeOn = false;
         ret.state = s_REG_WAIT;
         break;
       }
       // 4-5 (a..f): gesture hits; placeholders for now
-      if (fiveMs && !buttonOn) {
+      if (fiveMs && !drumMode) {
         if (xRead < -25.0f) { Serial.println(F("Kick!"));   ret.state = s_GESTURE_CALC; ret.savedClock = clock; break; }
         if (xRead >  25.0f) { Serial.println(F("Snare!"));  ret.state = s_GESTURE_CALC; ret.savedClock = clock; break; }
         if (yRead >  25.0f) { Serial.println(F("Tom!"));    ret.state = s_GESTURE_CALC; ret.savedClock = clock; break; }
@@ -345,7 +346,7 @@ full_state updateFSM(full_state currState,
 
     case s_GESTURE_CALC:
       // 5-4: wait 5ms then return to gesture wait
-      if (fiveMs && !buttonOn) {
+      if (fiveMs && !drumMode) {
         Serial.println(F("t 5–4: back to gesture wait"));
         pet_watchdog();
         ret.savedClock = clock;
@@ -425,8 +426,9 @@ void pollIMUAndUpdatePitch() {
 
   // 8) ==== FSM CALL (drives play/stop/vibrato per your table) ====
   const bool button = readButton();
+
   // xRead = freq, yRead = vibRate, zRead = yaw
-  FS = updateFSM(FS, (float)targetFreqHz, desiredVibRate, yaw_deg, button, now);
+  FS = updateFSM(FS, (float)targetFreqHz, desiredVibRate, yaw_deg, drumMode, now);
 
   // ---- Optional debug note print ----
   if (targetFreqHz != lastAnnouncedHz) {

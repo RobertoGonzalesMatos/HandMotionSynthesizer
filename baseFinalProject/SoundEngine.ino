@@ -8,6 +8,8 @@ const int OUT_PIN  = 6;
 
 int   curFreq        = 0; 
 int   baseFreq       = 0; 
+int drumMode = 0;
+
 
 const int VIB_DEPTH_HZ = 5;
 const float VIB_RATE_HZ  = 6.0f;

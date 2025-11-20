@@ -3,6 +3,7 @@
 
 extern int   curFreq;
 extern int   baseFreq;
+extern int    drumMode;
 int keyToFreq(char c);
 
 extern void mpuInit();
@@ -48,6 +49,10 @@ void loop() {
     }
     if (c == 'V') {        // vibrato off
       stopVibrato();
+      continue;
+    }
+    if (c == 'd') {        // Drum Mode on
+      drumMode = 1;
       continue;
     }
     // 'c' was unused; removed to keep behavior clean
