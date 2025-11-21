@@ -48,7 +48,9 @@
         <div class="staff-line"></div>
         <div class="staff-line"></div>
 
-          <div id="note-head">●</div>
+        <!-- <div id="note-head">●</div> -->
+        <div id="notes-layer"></div>
+
       </div>
     </section>
 
@@ -56,6 +58,7 @@
   <pre id="log"></pre>
 
   <script>
+    let nextX = 0; //keep track of notes
     let port, writer;
     const log = document.getElementById("log");
 
@@ -97,11 +100,6 @@
       "B": 13
     };
 
-    function updateScore(note) {
-        const noteHead = document.getElementById("note-head");
-        noteHead.style.top = notePositions[note] + "px";
-        document.getElementById("current-note").textContent = note;
-      }
 
 
 
@@ -116,49 +114,77 @@
        updateScore(note);
     }
 
+
     document.querySelectorAll(".key").forEach(key => {
       key.onclick = () => sendNote(key.dataset.note);
     });
     
-  let reader;
+    let reader;
 
-  async function readFromArduino() {
-    while (port.readable) {
-      reader = port.readable.getReader();
-      try {
-        while (true) {
-          const { value, done } = await reader.read();
-          if (done) break;
-          if (value) {
-            const text = new TextDecoder().decode(value);
-            handleArduinoMessage(text);
+    async function readFromArduino() {
+      while (port.readable) {
+        reader = port.readable.getReader();
+        try {
+          while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            if (value) {
+              const text = new TextDecoder().decode(value);
+              handleArduinoMessage(text);
+            }
           }
+        } catch (error) {
+          console.error(error);
+        } finally {
+          reader.releaseLock();
         }
-      } catch (error) {
-        console.error(error);
-      } finally {
-        reader.releaseLock();
       }
     }
-  }
 
-  function handleArduinoMessage(msg) {
-    //message comes in from serial as msg = "NOTE:C\n"
-    msg.split("\n").forEach(line => {
-      line = line.trim();
-      if (line.startsWith("NOTE:")) {
-        const note = line.slice(5); // remove NOTE:
-        if (note === "0") {
-          document.getElementById("current-note").textContent = "-";
-          document.getElementById("note-head").style.opacity = "0";
-        } else {
-          document.getElementById("note-head").style.opacity = "1";
-          document.getElementById("current-note").textContent = note;
-          updateScore(note);
-        }
+    function handleArduinoMessage(msg) {
+  msg.split("\n").forEach(line => {
+    line = line.trim();
+    if (line.startsWith("NOTE:")) {
+      const note = line.slice(5); // remove NOTE:
+      if (note === "0") {
+        document.getElementById("current-note").textContent = "-";
+        return;
+      } else {
+        updateScore(note); // now only this
       }
-    });
-  }
+    }
+  });
+}
+  
+
+    function updateScore(note) {
+      const notesLayer = document.getElementById("notes-layer");
+
+      const y = notePositions[note];  // your vertical mapping
+      const x = nextX;
+
+      // Create the note head
+      const div = document.createElement("div");
+      div.className = "note-head";
+      div.textContent = "●";
+      div.style.top = y + "px";
+      div.style.left = x + "px";
+
+      // Add to staff
+      notesLayer.appendChild(div);
+
+      // Move the cursor right for the next note
+      nextX += 40;  // spacing between notes
+
+      // (Optional) auto-scroll if full
+      if (nextX > 700) {  // near right edge of your 800px score
+        notesLayer.style.transform = `translateX(${700 - nextX}px)`;
+      }
+
+      // Update "Now Playing"
+      document.getElementById("current-note").textContent = note;
+    }
+
   </script>
 </body>
 </html>
