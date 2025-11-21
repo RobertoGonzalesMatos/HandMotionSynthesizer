@@ -101,7 +101,7 @@ void harmonyInit() {
   capSensors[0] = 9;
   capSensors[1] = 8;
   capSensors[2] = 7;
-  thresholds[0] = 400;
+  thresholds[0] = 800;
   thresholds[1] = 400;
   thresholds[2] = 500;
   // testCalibration();
