@@ -82,9 +82,28 @@
       log.textContent += "Switched to drum mode\n";
     };
 
-    document.querySelectorAll(".key").forEach(key => {
-      key.onclick = () => sendNote(key.dataset.note);
-    });
+    const notePositions = {
+      "C": 7,
+      "C#": 7,
+      "D": 1,
+      "D#": 1,
+      "E": -5,
+      "F": 31,
+      "F#": 31,
+      "G": 25,
+      "G#": 25,
+      "A": 19,
+      "A#": 19,
+      "B": 13
+    };
+
+    function updateScore(note) {
+        const noteHead = document.getElementById("note-head");
+        noteHead.style.top = notePositions[note] + "px";
+        document.getElementById("current-note").textContent = note;
+      }
+
+
 
     async function sendNote(note) {
       if (!writer) {
@@ -96,68 +115,50 @@
 
        updateScore(note);
     }
+
+    document.querySelectorAll(".key").forEach(key => {
+      key.onclick = () => sendNote(key.dataset.note);
+    });
     
+  let reader;
 
-    const notePositions = {
-      "C": 2,
-      "C#": 2,
-      "D": -4,
-      "D#": -4,
-      "E": -10,
-      "F": -16,
-      "F#": -16,
-      "G": 20,
-      "G#": 20,
-      "A": 14,
-      "A#": 14,
-      "B": 8
-    };
-
-  function updateScore(note) {
-      const noteHead = document.getElementById("note-head");
-      noteHead.style.top = notePositions[note] + "px";
-      document.getElementById("current-note").textContent = note;
-    }
-  
-    let reader;
-
-async function readFromArduino() {
-  while (port.readable) {
-    reader = port.readable.getReader();
-    try {
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        if (value) {
-          const text = new TextDecoder().decode(value);
-          handleArduinoMessage(text);
+  async function readFromArduino() {
+    while (port.readable) {
+      reader = port.readable.getReader();
+      try {
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          if (value) {
+            const text = new TextDecoder().decode(value);
+            handleArduinoMessage(text);
+          }
         }
+      } catch (error) {
+        console.error(error);
+      } finally {
+        reader.releaseLock();
       }
-    } catch (error) {
-      console.error(error);
-    } finally {
-      reader.releaseLock();
     }
   }
-}
 
-function handleArduinoMessage(msg) {
-  //message comes in from serial as msg = "NOTE:C\n"
-  msg.split("\n").forEach(line => {
-    line = line.trim();
-    if (line.startsWith("NOTE:")) {
-      const note = line.slice(5); // remove NOTE:
-      if (note === "0") {
-        document.getElementById("current-note").textContent = "-";
-        document.getElementById("note-head").style.opacity = "0";
-      } else {
-        document.getElementById("note-head").style.opacity = "1";
-        document.getElementById("current-note").textContent = note;
-        updateScore(note);
+  function handleArduinoMessage(msg) {
+    //message comes in from serial as msg = "NOTE:C\n"
+    msg.split("\n").forEach(line => {
+      line = line.trim();
+      if (line.startsWith("NOTE:")) {
+        const note = line.slice(5); // remove NOTE:
+        if (note === "0") {
+          document.getElementById("current-note").textContent = "-";
+          document.getElementById("note-head").style.opacity = "0";
+        } else {
+          document.getElementById("note-head").style.opacity = "1";
+          document.getElementById("current-note").textContent = note;
+          updateScore(note);
+        }
       }
-    }
-  });
-}
+    });
+  }
   </script>
 </body>
 </html>
