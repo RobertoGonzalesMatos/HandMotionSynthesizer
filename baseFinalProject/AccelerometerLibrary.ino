@@ -289,6 +289,7 @@ full_state updateFSM(full_state currState,
       if (fiveMs && !drumMode &&
           (fabsf(zRead) > PLAY_BAND_DEG || xRead <= 0.0f)) {
         Serial.println(F("t 3–2a: stop() (yaw out-of-band or no freq)"));
+        Serial.println("NOTE:0");
         doStop();
         ret.savedClock = clock;
         ret.state = s_REG_CALC;
@@ -459,9 +460,10 @@ void pollIMUAndUpdatePitch() {
 
   // ---- Optional debug note print (what the IMU is asking for) ----
   if (targetFreqHz != lastAnnouncedHz) {
-    Serial.print(F("[note] -> "));
-    printHzAndNote(targetFreqHz);
-    Serial.println();
+    // Serial.print(F("[note] -> "));
+    // printHzAndNote(targetFreqHz);
+    // Serial.println();
+    sendNoteToSerial(targetFreqHz);
     lastAnnouncedHz = targetFreqHz;
   }
 
@@ -508,6 +510,13 @@ static inline void printHzAndNote(int hz) {
   Serial.print(name);
   Serial.print(octave);
   Serial.print(')');
+}
+
+void sendNoteToSerial(int hz) {
+  int midi = hzToMidi(hz);
+  const char* name = NOTE12[(midi % 12 + 12) % 12];
+  Serial.print("NOTE:");
+  Serial.println(name); //sends it as NOTE:C
 }
 
 
