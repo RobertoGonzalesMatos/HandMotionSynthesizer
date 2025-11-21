@@ -68,6 +68,7 @@ void loop() {
       }
     if (c == 'd') {        // Drum Mode on
       drumMode = 1;
+      playNote(440);
       continue;
     }
     }

@@ -39,24 +39,23 @@
 
     <section id="score-container">
       <h2>Now Playing: <span id="current-note">—</span></h2>
-      <div id="score">
-        <img id="treble-clef" src="treble_clef.svg">
-
-        <div class="staff-line"></div>
-        <div class="staff-line"></div>
-        <div class="staff-line"></div>
-        <div class="staff-line"></div>
-        <div class="staff-line"></div>
-
-          <div id="note-head">●</div>
-      </div>
+        <div id="score">
+          <img id="treble-clef" src="treble_clef.svg">
+          <div id="notes-container">
+            <div id="notes-layer"></div>
+          </div>
+          <div class="staff-line"></div>
+          <div class="staff-line"></div>
+          <div class="staff-line"></div>
+          <div class="staff-line"></div>
+          <div class="staff-line"></div>
+        </div>
     </section>
-
-
-
   <pre id="log"></pre>
 
   <script>
+    let nextX = 50; //keep track of note head x position
+    let hasStarted = false; // track when first note is played
     let port, writer;
     const log = document.getElementById("log");
 
@@ -66,11 +65,14 @@
             await port.open({ baudRate: 9600 });
             writer = port.writable.getWriter();
             log.textContent += "Connected to Arduino!\n";
+
+            readFromArduino();
         } catch (error) {
             console.error("Connection failed:", error);
             log.textContent += `Error: ${error.message}\n`;
     }
     };
+
     document.getElementById("drum").onclick = async () => {
       if (!writer) {
         log.textContent += "Please connect first.\n";
@@ -80,41 +82,106 @@
       log.textContent += "Switched to drum mode\n";
     };
 
+    const notePositions = {
+      "C": 7,
+      "C#": 7,
+      "D": 1,
+      "D#": 1,
+      "E": -5,
+      "F": 31,
+      "F#": 31,
+      "G": 25,
+      "G#": 25,
+      "A": 19,
+      "A#": 19,
+      "B": 13
+    };
+
+
     document.querySelectorAll(".key").forEach(key => {
-      key.onclick = () => sendNote(key.dataset.note);
+      key.onclick = () => {
+        hasStarted = true; //start playing after first click
+        sendNote(key.dataset.note); //send note
+      };
     });
 
     async function sendNote(note) {
+      if (!hasStarted) { //first click check
+        log.textContent += "Click a note first to start playing.\n";
+        return;
+      }
+
       if (!writer) {
         log.textContent += "Please connect first.\n";
         return;
       }
-      await writer.write(new TextEncoder().encode(note));
+
+      await writer.write(new TextEncoder().encode(note)); //send note to Arduino
       log.textContent += `Played note: ${note}\n`;
 
-       updateScore(note);
+      updateScore(note); //update score display
     }
     
+    let reader;
 
-    const notePositions = {
-      "C": 2,
-      "C#": 2,
-      "D": -4,
-      "D#": -4,
-      "E": -10,
-      "F": -16,
-      "F#": -16,
-      "G": 20,
-      "G#": 20,
-      "A": 14,
-      "A#": 14,
-      "B": 8
-    };
+    //read data from Arduino
+    async function readFromArduino() {
+      while (port.readable) {
+        reader = port.readable.getReader();
+        try {
+          while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            if (value) {
+              const text = new TextDecoder().decode(value);
+              handleArduinoMessage(text);
+            }
+          }
+        } catch (error) {
+          console.error(error);
+        } finally {
+          reader.releaseLock();
+        }
+      }
+    }
 
-  function updateScore(note) {
-      const noteHead = document.getElementById("note-head");
-      noteHead.style.top = notePositions[note] + "px";
-      document.getElementById("current-note").textContent = note;
+    //handle messages from Arduino
+    function handleArduinoMessage(msg) {
+      msg.split("\n").forEach(line => {
+        line = line.trim();
+        if (line.startsWith("NOTE:")) { //only handle NOTE messages, not FSM
+          const note = line.slice(5); // remove NOTE:
+          if (note === "0") { //no note/silence
+            document.getElementById("current-note").textContent = "-";
+            return;
+          } else {
+            updateScore(note); //add note to score
+          }
+        }
+      });
+    }
+  
+    //add note head to score display + handle scrolling
+    function updateScore(note) {
+      const notesLayer = document.getElementById("notes-layer");
+      const y = notePositions[note];  
+      const x = nextX;
+
+      const div = document.createElement("div");
+      div.className = "note-head";
+      div.textContent = "●";
+      div.style.top = y + "px";
+      div.style.left = x + "px";
+
+      notesLayer.appendChild(div);
+      nextX += 40;
+
+      //auto-scroll
+      if (nextX > 700) {
+        notesLayer.style.transform = `translateX(${700 - nextX}px)`;
+      }
+
+      document.getElementById("current-note").textContent = note; //update "now playing"
     }
   </script>
 </body>
