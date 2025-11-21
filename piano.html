@@ -65,6 +65,8 @@
             await port.open({ baudRate: 9600 });
             writer = port.writable.getWriter();
             log.textContent += "Connected to Arduino!\n";
+
+            readFromArduino();
         } catch (error) {
             console.error("Connection failed:", error);
             log.textContent += `Error: ${error.message}\n`;
@@ -116,6 +118,45 @@
       noteHead.style.top = notePositions[note] + "px";
       document.getElementById("current-note").textContent = note;
     }
+  
+    let reader;
+
+async function readFromArduino() {
+  while (port.readable) {
+    reader = port.readable.getReader();
+    try {
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        if (value) {
+          const text = new TextDecoder().decode(value);
+          handleArduinoMessage(text);
+        }
+      }
+    } catch (error) {
+      console.error(error);
+    } finally {
+      reader.releaseLock();
+    }
+  }
+}
+
+function handleArduinoMessage(msg) {
+  // Example: msg = "NOTE:C\n"
+  msg.split("\n").forEach(line => {
+    line = line.trim();
+    if (line.startsWith("NOTE:")) {
+      const note = line.slice(5); // remove "NOTE:"
+      if (note === "0") {
+        document.getElementById("current-note").textContent = "—";
+        document.getElementById("note-head").style.top = "-999px"; // hide
+      } else {
+        document.getElementById("current-note").textContent = note;
+        updateScore(note);
+      }
+    }
+  });
+}
   </script>
 </body>
 </html>

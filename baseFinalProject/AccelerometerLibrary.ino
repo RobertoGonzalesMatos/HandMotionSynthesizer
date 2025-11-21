@@ -459,9 +459,10 @@ void pollIMUAndUpdatePitch() {
 
   // ---- Optional debug note print (what the IMU is asking for) ----
   if (targetFreqHz != lastAnnouncedHz) {
-    Serial.print(F("[note] -> "));
-    printHzAndNote(targetFreqHz);
-    Serial.println();
+    // Serial.print(F("[note] -> "));
+    // printHzAndNote(targetFreqHz);
+    // Serial.println();
+    sendNoteToSerial(targetFreqHz);
     lastAnnouncedHz = targetFreqHz;
   }
 
@@ -508,6 +509,13 @@ static inline void printHzAndNote(int hz) {
   Serial.print(name);
   Serial.print(octave);
   Serial.print(')');
+}
+
+void sendNoteToSerial(int hz) {
+  int midi = hzToMidi(hz);
+  const char* name = NOTE12[(midi % 12 + 12) % 12];
+  Serial.print("NOTE:");
+  Serial.println(name); // "NOTE:C"
 }
 
 
