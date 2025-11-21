@@ -106,7 +106,6 @@ static unsigned long lastChangeMs = 0;    // when lastRecFreq started
 static int       playIndex         = 0;
 static unsigned long playEventStartMs = 0;
 
-
 static inline void vibApply(float rateHz) {
   if (rateHz < 0.1f) {
     if (vibActive) {
@@ -283,6 +282,7 @@ full_state updateFSM(full_state currState,
         ret.state = s_REG_WAIT;
       }
       break;
+      Serial.println("staying in rec_calc");
 
     case s_REG_WAIT:
       // Silence condition: yaw out of band OR no valid freq → stop.
@@ -349,6 +349,7 @@ full_state updateFSM(full_state currState,
         ret.state = s_GESTURE_WAIT;
       }
       break;
+      Serial.println("staying in red_wait");
 
     case s_GESTURE_WAIT:
       // 4-3: toggle back to Regular Mode
@@ -456,6 +457,7 @@ void pollIMUAndUpdatePitch() {
   const bool button = readButton();
 
   // xRead = freq, yRead = vibRate, zRead = yaw
+  
   FS = updateFSM(FS, (float)targetFreqHz, desiredVibRate, yaw_deg, drumMode, now);
 
   // ---- Optional debug note print (what the IMU is asking for) ----
