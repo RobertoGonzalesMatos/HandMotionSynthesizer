@@ -516,7 +516,7 @@ void sendNoteToSerial(int hz) {
   int midi = hzToMidi(hz);
   const char* name = NOTE12[(midi % 12 + 12) % 12];
   Serial.print("NOTE:");
-  Serial.println(name); // "NOTE:C"
+  Serial.println(name); //sends it as NOTE:C
 }
 
 

@@ -117,24 +117,10 @@ header {
   background: #a7acf6;
 }
 
+/* music score */
 #score-container {
   text-align: center;
   margin-top: 40px;
-}
-
-/* #score {
-  position: relative;
-  width: 300px;
-  height: 100px;
-  margin: 0 auto;
-} */
-
-#score {
-  position: relative;
-  width: 800px;   /* longer canvas */
-  height: 100px;
-  margin: 0 auto;
-  /* overflow: hidden; */
 }
 
 .staff-line {
@@ -143,14 +129,6 @@ header {
   background: black;
   margin: 10px 0;
 }
-
-/* #note-head {
-  position: absolute;
-  left: 150px;
-  opacity: 0;   
-  font-size: 20px;
-  transition: top 0.2s ease;
-} */
 
 .note-head {
   position: absolute;
@@ -162,9 +140,17 @@ header {
 
 #treble-clef {
   position: absolute;
-  left: 5px;
+  left: 0;
   top: -15px;
   height: 90px;
+  z-index: 2; /* ensure it's above notes */
+}
+
+#score {
+  position: relative;
+  width: 800px; 
+  height: 100px;
+  margin: 0 auto;
 }
 
 #notes-layer {
@@ -172,5 +158,17 @@ header {
   top: 0;
   left: 0;
   height: 100%;
-  width: max-content; /* grows with notes */
+  display: flex;
+  gap: 40px;
+  transition: transform 0.3s ease;
+  z-index: 1; /* behind clef */
+}
+
+#notes-container {
+  position: absolute;
+  left: 50px;  /* right of clef */
+  top: 0;
+  height: 100%;
+  width: 750px; /* visible area */
+  overflow: hidden; /* hide notes that go beyond right edge */
 }

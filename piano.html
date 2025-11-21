@@ -39,26 +39,23 @@
 
     <section id="score-container">
       <h2>Now Playing: <span id="current-note">—</span></h2>
-      <div id="score">
-        <img id="treble-clef" src="treble_clef.svg">
-
-        <div class="staff-line"></div>
-        <div class="staff-line"></div>
-        <div class="staff-line"></div>
-        <div class="staff-line"></div>
-        <div class="staff-line"></div>
-
-        <!-- <div id="note-head">●</div> -->
-        <div id="notes-layer"></div>
-
-      </div>
+        <div id="score">
+          <img id="treble-clef" src="treble_clef.svg">
+          <div id="notes-container">
+            <div id="notes-layer"></div>
+          </div>
+          <div class="staff-line"></div>
+          <div class="staff-line"></div>
+          <div class="staff-line"></div>
+          <div class="staff-line"></div>
+          <div class="staff-line"></div>
+        </div>
     </section>
-
-
   <pre id="log"></pre>
 
   <script>
-    let nextX = 0; //keep track of notes
+    let nextX = 50; //keep track of note head x position
+    let hasStarted = false; // track when first note is played
     let port, writer;
     const log = document.getElementById("log");
 
@@ -101,26 +98,33 @@
     };
 
 
-
+    document.querySelectorAll(".key").forEach(key => {
+      key.onclick = () => {
+        hasStarted = true; //start playing after first click
+        sendNote(key.dataset.note); //send note
+      };
+    });
 
     async function sendNote(note) {
+      if (!hasStarted) { //first click check
+        log.textContent += "Click a note first to start playing.\n";
+        return;
+      }
+
       if (!writer) {
         log.textContent += "Please connect first.\n";
         return;
       }
-      await writer.write(new TextEncoder().encode(note));
+
+      await writer.write(new TextEncoder().encode(note)); //send note to Arduino
       log.textContent += `Played note: ${note}\n`;
 
-       updateScore(note);
+      updateScore(note); //update score display
     }
-
-
-    document.querySelectorAll(".key").forEach(key => {
-      key.onclick = () => sendNote(key.dataset.note);
-    });
     
     let reader;
 
+    //read data from Arduino
     async function readFromArduino() {
       while (port.readable) {
         reader = port.readable.getReader();
@@ -141,50 +145,44 @@
       }
     }
 
+    //handle messages from Arduino
     function handleArduinoMessage(msg) {
-  msg.split("\n").forEach(line => {
-    line = line.trim();
-    if (line.startsWith("NOTE:")) {
-      const note = line.slice(5); // remove NOTE:
-      if (note === "0") {
-        document.getElementById("current-note").textContent = "-";
-        return;
-      } else {
-        updateScore(note); // now only this
-      }
+      msg.split("\n").forEach(line => {
+        line = line.trim();
+        if (line.startsWith("NOTE:")) { //only handle NOTE messages, not FSM
+          const note = line.slice(5); // remove NOTE:
+          if (note === "0") { //no note/silence
+            document.getElementById("current-note").textContent = "-";
+            return;
+          } else {
+            updateScore(note); //add note to score
+          }
+        }
+      });
     }
-  });
-}
   
-
+    //add note head to score display + handle scrolling
     function updateScore(note) {
       const notesLayer = document.getElementById("notes-layer");
-
-      const y = notePositions[note];  // your vertical mapping
+      const y = notePositions[note];  
       const x = nextX;
 
-      // Create the note head
       const div = document.createElement("div");
       div.className = "note-head";
       div.textContent = "●";
       div.style.top = y + "px";
       div.style.left = x + "px";
 
-      // Add to staff
       notesLayer.appendChild(div);
+      nextX += 40;
 
-      // Move the cursor right for the next note
-      nextX += 40;  // spacing between notes
-
-      // (Optional) auto-scroll if full
-      if (nextX > 700) {  // near right edge of your 800px score
+      //auto-scroll
+      if (nextX > 700) {
         notesLayer.style.transform = `translateX(${700 - nextX}px)`;
       }
 
-      // Update "Now Playing"
-      document.getElementById("current-note").textContent = note;
+      document.getElementById("current-note").textContent = note; //update "now playing"
     }
-
   </script>
 </body>
 </html>
