@@ -1,121 +1,183 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>Arduino Piano 🎹</title>
+<meta charset="UTF-8">
+<title>Arduino Piano 🎹</title>
 </head>
 <link rel="stylesheet" href="style.css">
 <body>
-    <header>
-        <h1>Motion-based Synthesizer</h1>
-    </header>
-    <button id="connect">🔌 Connect to Arduino</button><br><br>
 
-    <section id ="piano-container">
-        <div id="piano">
-            <!-- White keys -->
-            <div class="key white" data-note="C">C</div>
-            <div class="key white" data-note="D">D</div>
-            <div class="key white" data-note="E">E</div>
-            <div class="key white" data-note="F">F</div>
-            <div class="key white" data-note="G">G</div>
-            <div class="key white" data-note="A">A</div>
-            <div class="key white" data-note="B">B</div>
-
-            <!-- Black keys -->
-            <div class="key black" data-note="C#"></div>
-            <div class="key black" data-note="D#"></div>
-            <div class="key black" data-note="F#"></div>
-            <div class="key black" data-note="G#"></div>
-            <div class="key black" data-note="A#"></div>
-        </div>
-    </section>
-
-    <section id="modes-container">
-        <h2>Modes</h2>
-        <p>Select different modes to change the sound and behavior of the synthesizer.</p>
-        <button id="drum">Drum Mode</button>
-    </section>
-
-    <section id="score-container">
-      <h2>Now Playing: <span id="current-note">—</span></h2>
-      <div id="score">
-        <img id="treble-clef" src="treble_clef.svg">
-
-        <div class="staff-line"></div>
-        <div class="staff-line"></div>
-        <div class="staff-line"></div>
-        <div class="staff-line"></div>
-        <div class="staff-line"></div>
-
-          <div id="note-head">●</div>
-      </div>
-    </section>
+<section id="left-container">
+        <section id="modes-container">
+                <h2>Modes</h2>
+                <p>Select a mode to change the sound and behavior of the synthesizer.</p>
+                <button id="drum">Drum Mode</button>
+        </section>
+        
+</section>
 
 
-  <pre id="log"></pre>
+<section id ="middle-container">
+<h1>Motion-based Synthesizer</h1>
+<button id="connect">🔌 Connect to Arduino</button>
 
-  <script>
-    let port, writer;
-    const log = document.getElementById("log");
+<section id ="piano-container">
+<div id="piano">
+        <!-- White keys -->
+        <div class="key white" data-note="C">C</div>
+        <div class="key white" data-note="D">D</div>
+        <div class="key white" data-note="E">E</div>
+        <div class="key white" data-note="F">F</div>
+        <div class="key white" data-note="G">G</div>
+        <div class="key white" data-note="A">A</div>
+        <div class="key white" data-note="B">B</div>
 
-    document.getElementById("connect").onclick = async () => {
-        try {
-            port = await navigator.serial.requestPort();
-            await port.open({ baudRate: 9600 });
-            writer = port.writable.getWriter();
-            log.textContent += "Connected to Arduino!\n";
-        } catch (error) {
-            console.error("Connection failed:", error);
-            log.textContent += `Error: ${error.message}\n`;
-    }
-    };
+        <!-- Black keys -->
+        <div class="key black" data-note="C#"></div>
+        <div class="key black" data-note="D#"></div>
+        <div class="key black" data-note="F#"></div>
+        <div class="key black" data-note="G#"></div>
+        <div class="key black" data-note="A#"></div>
+</div>
+</section>
 
-    document.getElementById("drum").onclick = async () => {
-      if (!writer) {
-        log.textContent += "Please connect first.\n";
-        return;
-      }
-      await writer.write(new TextEncoder().encode("d"));
-      log.textContent += "Switched to drum mode\n";
-    };
+<section id="score-container">
+<h2>Now Playing: <span id="current-note">—</span></h2>
+<div id="score">
+<img id="treble-clef" src="treble_clef.svg">
 
-    document.querySelectorAll(".key").forEach(key => {
-      key.onclick = () => sendNote(key.dataset.note);
-    });
+<div class="staff-line"></div>
+<div class="staff-line"></div>
+<div class="staff-line"></div>
+<div class="staff-line"></div>
+<div class="staff-line"></div>
 
-    async function sendNote(note) {
-      if (!writer) {
-        log.textContent += "Please connect first.\n";
-        return;
-      }
-      await writer.write(new TextEncoder().encode(note));
-      log.textContent += `Played note: ${note}\n`;
+<div id="note-head"></div>
+</div>
+</section>
 
-       updateScore(note);
-    }
-    
+<pre id="log"></pre>
 
-    const notePositions = {
-      "C": 2,
-      "C#": 2,
-      "D": -4,
-      "D#": -4,
-      "E": -10,
-      "F": -16,
-      "F#": -16,
-      "G": 20,
-      "G#": 20,
-      "A": 14,
-      "A#": 14,
-      "B": 8
-    };
+</section>
 
-  function updateScore(note) {
-      const noteHead = document.getElementById("note-head");
-      noteHead.style.top = notePositions[note] + "px";
-      document.getElementById("current-note").textContent = note;
-    }
-  </script>
+<section id="right-container">
+        <section id="record-container">
+                <h2>Record</h2>
+                <p>Select to record and save the synthesizer's sound.</p>
+                <button id="record">Record</button>
+        </section>
+
+</section>
+
+
+<script >
+        let port, writer, reader;
+        let drumMode = false;
+        const log = document.getElementById("log");
+        const drumButton = document.getElementById("drum");
+
+        document.getElementById("connect").onclick = async () => {
+                try {
+                        port = await navigator.serial.requestPort();
+                        await port.open({ baudRate: 9600 });
+
+                        await new Promise(r => setTimeout(r, 1000));
+
+                        writer = port.writable.getWriter();
+                        reader = port.readable.getReader();
+                        appendLog("Connected to Arduino!\n");
+                        listenToArduino();
+                } catch (error) {
+                        console.error("Connection failed:", error);
+                        appendLog(`Error: ${error.message}\n`);
+                }
+        };
+
+        document.getElementById("drum").onclick = async () => {
+                if (!writer) {
+                        appendLog("Please connect first.\n");
+                        return;
+                }
+                await writer.write(new TextEncoder().encode("d"));
+
+                if (!drumMode) {
+                        appendLog("Switched to drum mode.\n");
+                        drumButton.textContent = "Regular Mode";
+                        drumMode = true;
+                } else {
+                        appendLog("Switched to regular mode.\n");
+                        drumButton.textContent = "Drum Mode";
+                        drumMode = false;
+                }
+        };
+
+        document.querySelectorAll(".key").forEach(key => {
+                key.onclick = () => sendNote(key.dataset.note);
+                
+        });
+
+        async function sendNote(note) {
+                if (!writer) {
+                        appendLog("Please connect first.\n");
+                        return;
+                } 
+                document.getElementById("note-head").textContent = "●";
+                await writer.write(new TextEncoder().encode(note));
+                appendLog(`Played note: ${note}\n`);
+
+                updateScore(note);
+        }
+
+        const notePositions = {
+                "C": -81,
+                "C#": -81,
+                "D": -90,
+                "D#": -90,
+                "E": -39,
+                "F": -47,
+                "F#": -47,
+                "G": -56,
+                "G#": -56,
+                "A": -64,
+                "A#": -64,
+                "B": -73
+        };
+
+        function updateScore(note) {
+                const noteHead = document.getElementById("note-head");
+                noteHead.style.top = notePositions[note] + "px";
+                document.getElementById("current-note").textContent = note;
+        }
+
+        function appendLog(message) {
+                const log = document.getElementById("log");
+                log.textContent += message + "\n";
+                log.scrollTop = log.scrollHeight; 
+        }
+
+        async function listenToArduino() {
+                const decoder = new TextDecoder();
+
+                while (true) {
+                        try {
+                                const { value, done } = await reader.read();
+                                if (done) {
+                                        console.log("Serial reader stopped");
+                                        break;
+                                }
+
+                                const text = decoder.decode(value);
+                                appendLog("Arduino" + text);
+
+                        } catch (error) {
+                                console.error("Read error:", error);
+                                break;
+                        }
+                }
+        }
+
+      
+</script>
+
 </body>
 </html>

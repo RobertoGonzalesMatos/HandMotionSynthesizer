@@ -3,7 +3,7 @@
 
 extern int   curFreq;
 extern int   baseFreq;
-extern int    drumMode;
+extern bool    drumMode;
 int keyToFreq(char c);
 
 extern void mpuInit();
@@ -18,6 +18,8 @@ extern void setVibrato(float vibRateHz);
 void setup() {
   Serial.begin(9600);
   while (!Serial) {}
+  delay(500);              
+  Serial.println("Arduino ready!");
 
   initGPT();
   mpuInit();
@@ -26,6 +28,9 @@ void setup() {
 void loop() {
   while (Serial.available() > 0) {
     char c = Serial.read();
+
+    Serial.println("Ping");
+    delay(1000);
     if (c == '\r' || c == '\n') continue;
 
     // ---- Recording / Playback controls ----
@@ -66,7 +71,8 @@ void loop() {
         continue;
       }
     if (c == 'd') {        // Drum Mode on
-      drumMode = 1;
+      drumMode = !drumMode;
+      Serial.println("Drum Mode");
       playNote(440);
       continue;
     }

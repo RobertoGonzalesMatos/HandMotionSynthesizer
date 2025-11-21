@@ -13,7 +13,7 @@ extern void stopPlay();
 extern void stopVibrato();
 extern void setVibrato(float vibRateHz);
 extern int  curFreq;
-extern int drumMode;
+extern bool drumMode;
 
 static int lastAnnouncedHz = -1;
 
