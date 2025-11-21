@@ -139,6 +139,7 @@ header {
 #note-head {
   position: absolute;
   left: 150px;
+  opacity: 0;   
   font-size: 32px;
   transition: top 0.2s ease;
 }

@@ -142,15 +142,16 @@ async function readFromArduino() {
 }
 
 function handleArduinoMessage(msg) {
-  // Example: msg = "NOTE:C\n"
+  //message comes in from serial as msg = "NOTE:C\n"
   msg.split("\n").forEach(line => {
     line = line.trim();
     if (line.startsWith("NOTE:")) {
-      const note = line.slice(5); // remove "NOTE:"
+      const note = line.slice(5); // remove NOTE:
       if (note === "0") {
-        document.getElementById("current-note").textContent = "—";
-        document.getElementById("note-head").style.top = "-999px"; // hide
+        document.getElementById("current-note").textContent = "-";
+        document.getElementById("note-head").style.opacity = "0";
       } else {
+        document.getElementById("note-head").style.opacity = "1";
         document.getElementById("current-note").textContent = note;
         updateScore(note);
       }

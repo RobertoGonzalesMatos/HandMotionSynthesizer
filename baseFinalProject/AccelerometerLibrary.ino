@@ -289,6 +289,7 @@ full_state updateFSM(full_state currState,
       if (fiveMs && !drumMode &&
           (fabsf(zRead) > PLAY_BAND_DEG || xRead <= 0.0f)) {
         Serial.println(F("t 3–2a: stop() (yaw out-of-band or no freq)"));
+        Serial.println("NOTE:0");
         doStop();
         ret.savedClock = clock;
         ret.state = s_REG_CALC;
