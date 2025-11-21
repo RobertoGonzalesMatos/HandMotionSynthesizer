@@ -143,7 +143,7 @@ header {
   left: 0;
   top: -15px;
   height: 90px;
-  z-index: 2; /* ensure it's above notes */
+  z-index: 2;
 }
 
 #score {
@@ -161,14 +161,14 @@ header {
   display: flex;
   gap: 40px;
   transition: transform 0.3s ease;
-  z-index: 1; /* behind clef */
+  z-index: 1;
 }
 
 #notes-container {
   position: absolute;
-  left: 50px;  /* right of clef */
+  left: 50px;
   top: 0;
   height: 100%;
-  width: 750px; /* visible area */
-  overflow: hidden; /* hide notes that go beyond right edge */
+  width: 750px;
+  overflow: hidden;
 }
