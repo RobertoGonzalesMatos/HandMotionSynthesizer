@@ -460,14 +460,21 @@ void pollIMUAndUpdatePitch() {
   
   FS = updateFSM(FS, (float)targetFreqHz, desiredVibRate, yaw_deg, drumMode, now);
 
-  // ---- Optional debug note print (what the IMU is asking for) ----
-  if (targetFreqHz != lastAnnouncedHz) {
-    // Serial.print(F("[note] -> "));
-    // printHzAndNote(targetFreqHz);
-    // Serial.println();
-    sendNoteToSerial(targetFreqHz);
-    lastAnnouncedHz = targetFreqHz;
+  // ---- print played note to Serial ----
+  if (notePlaying) {
+      // Instrument is playing → print current note if changed
+      if (curFreq != lastAnnouncedHz) {
+          sendNoteToSerial(curFreq);
+          lastAnnouncedHz = curFreq;
+      }
+  } else {
+      // Instrument is silent → print ONLY NOTE:0 (one time)
+      if (lastAnnouncedHz != 0) {
+          Serial.println("NOTE:0");
+          lastAnnouncedHz = 0;
+      }
   }
+
 
   // 9) ==== Recording logic: record EFFECTIVE freq (played or silence) ====
   if (recActive) {
