@@ -13,7 +13,7 @@ extern void stopPlay();
 extern void stopVibrato();
 extern void setVibrato(float vibRateHz);
 extern int  curFreq;
-extern int drumMode;
+extern bool drumMode;
 
 static int lastAnnouncedHz = -1;
 
@@ -253,7 +253,7 @@ static inline int quantizeWithHys(float semi_cont) {
 // xRead = targetFreqHz, yRead = vibrato Hz, zRead = yaw_deg
 full_state updateFSM(full_state currState,
                      float xRead, float yRead, float zRead,
-                     bool buttonOn, unsigned long clock) {
+                     bool drumMode, unsigned long clock) {
   full_state ret = currState;
   bool fiveMs = (clock - currState.savedClock) >= 5;
 
@@ -454,11 +454,11 @@ void pollIMUAndUpdatePitch() {
   float desiredVibRate = vibRates[lastVibLevel < 0 ? 0 : lastVibLevel];
 
   // 8) ==== FSM CALL (drives play/stop/vibrato per your table) ====
-  const bool button = readButton();
 
   // xRead = freq, yRead = vibRate, zRead = yaw
   
   FS = updateFSM(FS, (float)targetFreqHz, desiredVibRate, yaw_deg, drumMode, now);
+
 
   // ---- print played note to Serial ----
   if (notePlaying) {
@@ -473,7 +473,8 @@ void pollIMUAndUpdatePitch() {
           Serial.println("NOTE:0");
           lastAnnouncedHz = 0;
       }
-  }
+    }
+
 
 
   // 9) ==== Recording logic: record EFFECTIVE freq (played or silence) ====
@@ -524,8 +525,11 @@ static inline void printHzAndNote(int hz) {
 void sendNoteToSerial(int hz) {
   int midi = hzToMidi(hz);
   const char* name = NOTE12[(midi % 12 + 12) % 12];
+
   Serial.print("NOTE:");
   Serial.println(name); //sends it as NOTE:C
+
+
 }
 
 
@@ -545,8 +549,16 @@ void stopRecording() {
       recCount++;
     }
   }
-  Serial.print(F("[REC] stopped, events="));
-  Serial.println(recCount);
+  Serial.print("REC:[");
+  for (int i = 0; i < recCount; i++) {
+  Serial.print("{\"freq\":");
+  Serial.print(recBuf[i].freq);
+  Serial.print(",\"duration\":");
+  Serial.print(recBuf[i].duration);
+  Serial.print("}");
+  if (i < recCount - 1) Serial.print(",");
+}
+Serial.println("]");
 }
 
 void startRecording() {
