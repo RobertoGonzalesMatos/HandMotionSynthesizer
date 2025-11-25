@@ -18,19 +18,17 @@ extern void setVibrato(float vibRateHz);
 void setup() {
   Serial.begin(9600);
   while (!Serial) {}
-  delay(500);              
-  Serial.println("Arduino ready!");
 
   initGPT();
   mpuInit();
+  harmonyInit();
 }
 
 void loop() {
   while (Serial.available() > 0) {
     char c = Serial.read();
 
-    Serial.println("Ping");
-    delay(1000);
+
     if (c == '\r' || c == '\n') continue;
 
     // ---- Recording / Playback controls ----
@@ -72,12 +70,13 @@ void loop() {
       }
     if (c == 'd') {        // Drum Mode on
       drumMode = !drumMode;
-      Serial.println("Drum Mode");
-      playNote(440);
       continue;
     }
     }
   }
+
+  // Update harmony controls + associated variables
+  updateHaromnyControls();
 
   // Service playback if active
   servicePlaybackTick();

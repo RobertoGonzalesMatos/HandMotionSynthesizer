@@ -4,23 +4,20 @@ body {
     flex-direction: row;          /* horizontal row */
     align-items: center;
     align-content: center;
-
-  
-    margin-left: 100px;
-    margin-right: 100px;
     min-height: 100vh;  
     
 
   /* Combined gradient + image */
-  background: linear-gradient(
+  background: 
+  linear-gradient(
       135deg,
       rgba(180, 203, 250, 0.6),
-      rgba(201, 220, 248, 0.6)
+      rgba(239, 244, 250, 0.6)
     ),
     url('background.png') no-repeat center center fixed;
   background-size: cover;
   background-position: center;
-  background-repeat: no-repeat;
+
 }
 
 #left-container {
@@ -44,7 +41,6 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;   
-    
 }
 
 
@@ -126,6 +122,12 @@ h2 {
   background: #eaeaea;
 }
 
+.key.highlighted {
+    background-color: yellow;          /* or any highlight */
+    box-shadow: 0 0 10px rgba(255,255,0,0.8);
+    transition: 0.2s;
+}
+
 .key.black {
   width: 32px;
   height: 130px;
@@ -177,7 +179,7 @@ h2 {
 #drum {
   padding: 14px 26px;
   border-radius: 16px;
-  width: 160px;
+  width: 180px;
   border: none;
   font-size: 1rem;
   background: #5b65f7;
@@ -193,7 +195,7 @@ h2 {
 
 #record {
   padding: 14px 26px;
-  width: 160px;
+  width: 180px;
   border-radius: 16px;
   border: none;
   font-size: 1rem;
@@ -210,11 +212,12 @@ h2 {
   background: #a7acf6;
 }
 
+/* music score */
 #score-container {
-    position: relative;
+    /* position: relative; */
     text-align: center;
-    font-size: small;
-    margin-top: 20px;
+    /* font-size: small; */
+    margin-top: 40px;
     
 }
 
@@ -229,20 +232,28 @@ h2 {
   width: 100%;
   height: 2px;
   background: black;
-  margin: 15px 0;
+  margin: 10px 0;
 }
 
-#note-head {
-  position: relative;
-  font-size: 35px;
-  transition: top 0.2s ease;
+.note-head {
+    background-image: url('piano_note.png');
+    position: absolute;
+    width: 30px;
+    height: 30px;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    opacity: 1;
+    transition: opacity 0.2s ease;
 }
+
 
 #treble-clef {
   position: absolute;
-  left: 5px;
+  left: 0;
   top: -15px;
   height: 90px;
+  z-index: 2;
 }
 
 #log {
@@ -254,7 +265,6 @@ h2 {
     border-radius: 16px;                  
     box-shadow: 0 8px 20px rgba(96, 91, 245, 0.8); 
     padding: 10px;
-    margin-top: 20px;
     text-align: left;
     font-family: monospace;
     font-size: 0.9rem;
@@ -262,3 +272,29 @@ h2 {
     text-align: center;
     
     }
+#score {
+  position: relative;
+  width: 800px; 
+  height: 100px;
+  margin: 0 auto;
+}
+
+#notes-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  display: flex;
+  gap: 40px;
+  transition: transform 0.3s ease;
+  z-index: 1;
+}
+
+#notes-container {
+  position: absolute;
+  left: 50px;
+  top: 0;
+  height: 100%;
+  width: 750px;
+  overflow: hidden
+}

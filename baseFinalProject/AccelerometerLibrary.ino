@@ -106,7 +106,6 @@ static unsigned long lastChangeMs = 0;    // when lastRecFreq started
 static int       playIndex         = 0;
 static unsigned long playEventStartMs = 0;
 
-
 static inline void vibApply(float rateHz) {
   if (rateHz < 0.1f) {
     if (vibActive) {
@@ -116,9 +115,9 @@ static inline void vibApply(float rateHz) {
     }
   } else {
     if (!vibActive || fabsf(rateHz - vibCurrentRateHz) > 0.05f) {
-      setVibrato(rateHz);
+      setVibrato(rateHz*2);
       vibActive = true;
-      vibCurrentRateHz = rateHz;
+      vibCurrentRateHz = rateHz*2;
     }
   }
 }
@@ -254,7 +253,7 @@ static inline int quantizeWithHys(float semi_cont) {
 // xRead = targetFreqHz, yRead = vibrato Hz, zRead = yaw_deg
 full_state updateFSM(full_state currState,
                      float xRead, float yRead, float zRead,
-                     bool buttonOn, unsigned long clock) {
+                     bool drumMode, unsigned long clock) {
   full_state ret = currState;
   bool fiveMs = (clock - currState.savedClock) >= 5;
 
@@ -264,7 +263,6 @@ full_state updateFSM(full_state currState,
       if (xRead > 0.0f && fabsf(zRead) <= PLAY_BAND_DEG) {
         Serial.println(F("t 1–2: init → reg_calc (start note)"));
         ret.noteFrequency = (unsigned long)xRead;
-
         vibForceStop();
         curFreq = (int)ret.noteFrequency;
         playNote(curFreq);
@@ -284,12 +282,14 @@ full_state updateFSM(full_state currState,
         ret.state = s_REG_WAIT;
       }
       break;
+      Serial.println("staying in rec_calc");
 
     case s_REG_WAIT:
       // Silence condition: yaw out of band OR no valid freq → stop.
       if (fiveMs && !drumMode &&
           (fabsf(zRead) > PLAY_BAND_DEG || xRead <= 0.0f)) {
         Serial.println(F("t 3–2a: stop() (yaw out-of-band or no freq)"));
+        Serial.println("NOTE:0");
         doStop();
         ret.savedClock = clock;
         ret.state = s_REG_CALC;
@@ -349,6 +349,7 @@ full_state updateFSM(full_state currState,
         ret.state = s_GESTURE_WAIT;
       }
       break;
+      Serial.println("staying in red_wait");
 
     case s_GESTURE_WAIT:
       // 4-3: toggle back to Regular Mode
@@ -453,16 +454,17 @@ void pollIMUAndUpdatePitch() {
   float desiredVibRate = vibRates[lastVibLevel < 0 ? 0 : lastVibLevel];
 
   // 8) ==== FSM CALL (drives play/stop/vibrato per your table) ====
-  const bool button = readButton();
 
   // xRead = freq, yRead = vibRate, zRead = yaw
+  
   FS = updateFSM(FS, (float)targetFreqHz, desiredVibRate, yaw_deg, drumMode, now);
 
   // ---- Optional debug note print (what the IMU is asking for) ----
   if (targetFreqHz != lastAnnouncedHz) {
-    Serial.print(F("[note] -> "));
-    printHzAndNote(targetFreqHz);
-    Serial.println();
+    // Serial.print(F("[note] -> "));
+    // printHzAndNote(targetFreqHz);
+    // Serial.println();
+    sendNoteToSerial(targetFreqHz);
     lastAnnouncedHz = targetFreqHz;
   }
 
@@ -511,6 +513,18 @@ static inline void printHzAndNote(int hz) {
   Serial.print(')');
 }
 
+void sendNoteToSerial(int hz) {
+  int midi = hzToMidi(hz);
+  const char* name = NOTE12[(midi % 12 + 12) % 12];
+  // if (!notePlaying) {
+  //   Serial.print("SILENCE:");
+  //   Serial.println(name); 
+  // } else {
+    Serial.print("NOTE:");
+    Serial.println(name); //sends it as NOTE:C
+  // }
+}
+
 
 //recording
 
@@ -528,8 +542,16 @@ void stopRecording() {
       recCount++;
     }
   }
-  Serial.print(F("[REC] stopped, events="));
-  Serial.println(recCount);
+  Serial.print("REC:[");
+  for (int i = 0; i < recCount; i++) {
+  Serial.print("{\"freq\":");
+  Serial.print(recBuf[i].freq);
+  Serial.print(",\"duration\":");
+  Serial.print(recBuf[i].duration);
+  Serial.print("}");
+  if (i < recCount - 1) Serial.print(",");
+}
+Serial.println("]");
 }
 
 void startRecording() {
