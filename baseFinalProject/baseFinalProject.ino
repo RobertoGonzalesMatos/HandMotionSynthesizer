@@ -3,7 +3,7 @@
 
 extern int   curFreq;
 extern int   baseFreq;
-extern int    drumMode;
+extern bool    drumMode;
 int keyToFreq(char c);
 
 extern void mpuInit();
@@ -21,11 +21,14 @@ void setup() {
   
   initGPT();
   mpuInit();
+  harmonyInit();
 }
 
 void loop() {
   while (Serial.available() > 0) {
     char c = Serial.read();
+
+
     if (c == '\r' || c == '\n') continue;
 
     // ---- Recording / Playback controls ----
@@ -66,12 +69,14 @@ void loop() {
         continue;
       }
     if (c == 'd') {        // Drum Mode on
-      drumMode = 1;
-      playNote(440);
+      drumMode = !drumMode;
       continue;
     }
     }
   }
+
+  // Update harmony controls + associated variables
+  updateHaromnyControls();
 
   // Service playback if active
   servicePlaybackTick();

@@ -14,7 +14,7 @@ const int OUT_PIN3 = 11;
 
 int   curFreq        = 0; 
 int   baseFreq       = 0; 
-int drumMode = 0;
+bool drumMode = false;
 
 
 const int VIB_DEPTH_HZ = 5;
@@ -74,9 +74,15 @@ void initGPT() {
 
 
   R_PFS->PORT[OUT_PORT].PIN[OUT_PIN].PmnPFS_b.PDR = 1;
+<<<<<<< HEAD
   R_PFS->PORT[OUT_PORT].PIN[OUT_PIN1].PmnPFS_b.PDR = 1;
   R_PFS->PORT[OUT_PORT].PIN[OUT_PIN2].PmnPFS_b.PDR = 1;
   R_PFS->PORT[OUT_PORT].PIN[OUT_PIN3].PmnPFS_b.PDR = 1;
+=======
+  // R_PFS->PORT[OUT_PORT].PIN[OUT_PIN1].PmnPFS_b.PDR = 1;
+  // R_PFS->PORT[OUT_PORT].PIN[OUT_PIN2].PmnPFS_b.PDR = 1;
+  // R_PFS->PORT[OUT_PORT].PIN[OUT_PIN3].PmnPFS_b.PDR = 1;
+>>>>>>> asia
 
 
   R_ICU->IELSR[TIMER_INT] = 0;
@@ -106,9 +112,15 @@ void initGPT() {
 
 void playNote(int freq) {
   R_GPT2->GTCR_b.CST = 0;
+<<<<<<< HEAD
   // R_GPT4->GTCR_b.CST = 0;
   // R_GPT5->GTCR_b.CST = 0;
   // R_GPT6->GTCR_b.CST = 0;
+=======
+  if (FS.harmonies[0]) R_GPT4->GTCR_b.CST = 0;
+  if (FS.harmonies[1]) R_GPT5->GTCR_b.CST = 0;
+  if (FS.harmonies[2]) R_GPT6->GTCR_b.CST = 0;
+>>>>>>> asia
 
   int harmony = freq * pow(2, 4.0/12.0);
   int harmony2 = freq * pow(2, 7.0/12.0);
@@ -116,6 +128,7 @@ void playNote(int freq) {
 
 #ifdef SINUSOID
   R_GPT2->GTPR = CLOCKFREQ / (16.0 * freq);
+<<<<<<< HEAD
   // R_GPT4->GTPR = CLOCKFREQ / (16.0 * harmony);
   // R_GPT5->GTPR = CLOCKFREQ / (16.0 * harmony2);
   // R_GPT6->GTPR = CLOCKFREQ / (16.0 * harmony3);
@@ -136,6 +149,32 @@ void playNote(int freq) {
   // R_GPT4->GTCR_b.CST = 1;
   // R_GPT5->GTCR_b.CST = 1;
   // R_GPT6->GTCR_b.CST = 1;
+=======
+  if (FS.harmonies[0]) R_GPT4->GTPR = CLOCKFREQ / (16.0 * harmony);
+  if (FS.harmonies[1]) R_GPT5->GTPR = CLOCKFREQ / (16.0 * harmony2);
+  if (FS.harmonies[2]) R_GPT6->GTPR = CLOCKFREQ / (16.0 * harmony3);
+#else
+  R_GPT2->GTPR = CLOCKFREQ / (2.0 * freq);
+  if (FS.harmonies[0]) R_GPT4->GTPR = CLOCKFREQ / (2.0 * harmony);
+  if (FS.harmonies[1]) R_GPT5->GTPR = CLOCKFREQ / (2.0 * harmony2);
+  if (FS.harmonies[2]) R_GPT6->GTPR = CLOCKFREQ / (2.0 * harmony3);
+#endif
+
+  R_ICU->IELSR[TIMER_INT] = (0x06d << R_ICU_IELSR_IELS_Pos);
+  R_GPT2->GTCR_b.CST = 1;
+  if (FS.harmonies[0]) {
+    R_ICU->IELSR[HARMONY_INT] = (0x07d << R_ICU_IELSR_IELS_Pos);
+    R_GPT4->GTCR_b.CST = 1;
+  }
+  if (FS.harmonies[1]) {
+    R_ICU->IELSR[HARMONY_INT2] = (0x085 << R_ICU_IELSR_IELS_Pos);
+    R_GPT5->GTCR_b.CST = 1;
+  }
+  if (FS.harmonies[2]) {
+    R_ICU->IELSR[HARMONY_INT3] = (0x08d << R_ICU_IELSR_IELS_Pos);
+    R_GPT6->GTCR_b.CST = 1;
+  }
+>>>>>>> asia
 }
 
 void stopPlay() {
