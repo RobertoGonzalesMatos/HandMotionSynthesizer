@@ -15,7 +15,6 @@ typedef struct {
   bool gestureModeOn;
   unsigned long savedClock;
   fsm_state state;
-  bool harmonies[3];
 } full_state;
 
 void startRecording();      
@@ -23,10 +22,7 @@ void stopRecording();
 void startPlayback();       
 void stopPlayback();        
 void servicePlaybackTick();
-void updateHarmonyControls();
-void harmonyInit();
 bool isRecording();         
 bool isPlayingBack();
 
 #endif
-

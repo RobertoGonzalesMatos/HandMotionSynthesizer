@@ -79,190 +79,221 @@ let drumMode = false; //track if in drum mode
 let isRecording = false; //track if recording
 let port, writer;
 const log = document.getElementById("log");
+let recBuffer = "";        // collect recording JSON here
+let recActive = false;    // flag for ongoing REC message
 
 document.getElementById("connect").onclick = async () => {
-        try {
-                port = await navigator.serial.requestPort();
-                await port.open({ baudRate: 9600 });
-                writer = port.writable.getWriter();
-                appendLog("Connected to Arduino!\n");
+  try {
+          port = await navigator.serial.requestPort();
+          await port.open({ baudRate: 9600 });
+          writer = port.writable.getWriter();
+          appendLog("Connected to Arduino!\n");
 
-                readFromArduino();
-        } catch (error) {
-                console.error("Connection failed:", error);
-                appendLog(`Error: ${error.message}\n`);
-        }
+          readFromArduino();
+  } catch (error) {
+          console.error("Connection failed:", error);
+          appendLog(`Error: ${error.message}\n`);
+  }
 };
 
 
 document.getElementById("drum").onclick = async () => {
-        if (!writer) {
-                appendLog("Please connect first.\n");
-                return;
-        }
-        await writer.write(new TextEncoder().encode("d"));
-        if (!drumMode) {
-                drumMode = true;
-                document.getElementById("drum").textContent = "Regular Mode";
-                appendLog("Switched to drum mode.\n");
-        } else {
-                drumMode = false;
-                document.getElementById("drum").textContent = "Drum Mode";
-                appendLog("Switched to regular mode.\n");
-        }
+  if (!writer) {
+          appendLog("Please connect first.\n");
+          return;
+  }
+  await writer.write(new TextEncoder().encode("d"));
+  if (!drumMode) {
+          drumMode = true;
+          document.getElementById("drum").textContent = "Regular Mode";
+          appendLog("Switched to drum mode.\n");
+  } else {
+          drumMode = false;
+          document.getElementById("drum").textContent = "Drum Mode";
+          appendLog("Switched to regular mode.\n");
+  }
 };
 
 
 const notePositions = {
-        "C": 7,
-        "C#": 7,
-        "D": 1,
-        "D#": 1,
-        "E": -5,
-        "F": 31,
-        "F#": 31,
-        "G": 25,
-        "G#": 25,
-        "A": 19,
-        "A#": 19,
-        "B": 13
+  "C": 7,
+  "C#": 7,
+  "D": 1,
+  "D#": 1,
+  "E": -5,
+  "F": 31,
+  "F#": 31,
+  "G": 25,
+  "G#": 25,
+  "A": 19,
+  "A#": 19,
+  "B": 13
 };
 
 
 
 
 document.querySelectorAll(".key").forEach(key => {
-        key.onclick = () => {
-                hasStarted = true; //start playing after first click
-                sendNote(key.dataset.note); //send note
-        };
+  key.onclick = () => {
+          hasStarted = true; //start playing after first click
+          sendNote(key.dataset.note); //send note
+  };
 });
 
 
 async function sendNote(note) {
-        if (!hasStarted) { //first click check
-                appendLog("Click a note first to start playing.\n");
-                return;
-        }
+  if (!hasStarted) { //first click check
+          appendLog("Click a note first to start playing.\n");
+          return;
+  }
 
-        if (!writer) {
-                appendLog("Please connect first.\n");
-                return;
-        }
+  if (!writer) {
+          appendLog("Please connect first.\n");
+          return;
+  }
 
-        await writer.write(new TextEncoder().encode(note)); //send note to Arduino
-        appendLog(`Played note: ${note}\n`);
+  await writer.write(new TextEncoder().encode(note)); //send note to Arduino
+  appendLog(`Played note: ${note}\n`);
 
-        updateScore(note); //update score display
+  updateScore(note); //update score display
 }
 
 
 let reader;
 
-    //read data from Arduino
+//read data from Arduino
 async function readFromArduino() {
-      while (port.readable) {
-                reader = port.readable.getReader();
-        try {
-          while (true) {
-            const { value, done } = await reader.read();
-            if (done) break;
-            if (value) {
-              const text = new TextDecoder().decode(value);
-              handleArduinoMessage(text);
-            }
-          }
-        } catch (error) {
-          console.error(error);
-        } finally {
-          reader.releaseLock();
+  while (port.readable) {
+            reader = port.readable.getReader();
+    try {
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        if (value) {
+          const text = new TextDecoder().decode(value);
+          handleArduinoMessage(text);
         }
       }
+    } catch (error) {
+      console.error(error);
+    } finally {
+      reader.releaseLock();
+    }
+  }
 }
-
 
 //handle messages from Arduino
 function handleArduinoMessage(msg) {
-        msg.split("\n").forEach(line => {
-                line = line.trim();
-                if (line.startsWith("NOTE:")) { //only handle NOTE messages, not FSM
-                        const note = line.slice(5); // remove NOTE:
-                        if (note === "0") { //no note/silence
-                                document.getElementById("current-note").textContent = "-";
-                                return;
-                        } else {
-                                updateScore(note); //add note to score
-                        }
-                } else if (line.startsWith("REC:[")) {
-                        const recBuf = [];
-                        const recData = line.slice(4).trim(); // remove REC:
-                        if (recData.length > 0) {
-                                try {
-                                        const events = JSON.parse(recData);
-                                        events.forEach(event => {
-                                                recBuf.push({ freq: event.freq, duration: event.duration });
-                                        });
-                                        const blob = new Blob([JSON.stringify(events)], { type: 'application/json' });
-                                        const url = URL.createObjectURL(blob);
-                                        const a = document.createElement('a');
-                                        a.href = url;
-                                        a.download = 'recording.json';
-                                        document.body.appendChild(a);
-                                        a.click();
-                                        document.body.removeChild(a);
-                                        URL.revokeObjectURL(url);
-                                        appendLog("Recording saved as recording.json\n");
-                                } catch (e) {
-                                        console.error("Failed to parse recording data:", e);
-                                        appendLog("Error parsing recording data.\n");
-                                        return;
-                                }
+  msg.split("\n").forEach(line => {
+          line = line.trim();
+          if (line.startsWith("NOTE:")) { 
+                  const note = line.slice(5); // remove NOTE:
+                  if (note === "0") { //no note/silence
+                          document.getElementById("current-note").textContent = "-";
+                          return;
+                  } else {
+                          updateScore(note); //add note to score
+                  }
+          } 
+          handleRecordingLine(line);
+  });
+}
 
-                        }
+//handle lines related to recording
+function handleRecordingLine(line) {
+  //Start of recording
+  if (line.startsWith("REC:[")) {
+      recActive = true;
+      recBuffer = line.slice(4).trim();   //store initial chunk
+      return;
+  }
 
-                }
-        });
+  //if we are not in REC mode, ignore
+  if (!recActive) return;
+
+  //continue buffering
+  recBuffer += line;
+
+  //if JSON array is complete
+  if (recBuffer.endsWith("]")) {
+      finalizeRecording(recBuffer);
+      recActive = false;
+      recBuffer = "";
+  }
+}
+
+//Finalize + save recording
+function finalizeRecording(jsonString) {
+  appendLog("Full recording received.");
+  try {
+      const events = JSON.parse(jsonString);
+
+      const blob = new Blob([JSON.stringify(events)], {
+          type: "application/json"
+      });
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "recording.json";
+
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+
+      URL.revokeObjectURL(url);
+
+      appendLog("Saved recording.json!");
+  } catch (err) {
+      console.error(err);
+      appendLog("JSON Parse Error — invalid recording.");
+  }
 }
   
 
 //add note head to score display + handle scrolling
 function updateScore(note) {
-        const notesLayer = document.getElementById("notes-layer");
-        const y = notePositions[note];
-        const x = nextX;
+  const notesLayer = document.getElementById("notes-layer");
+  const y = notePositions[note];
+  const x = nextX;
 
-        const div = document.createElement("div");
-        div.className = "note-head";
-        div.style.top = y + "px";
-        div.style.left = x + "px";
+  const div = document.createElement("div");
+  div.className = "note-head";
+  div.style.top = y + "px";
+  div.style.left = x + "px";
 
-        notesLayer.appendChild(div);
-        nextX += 40;
+  notesLayer.appendChild(div);
+  nextX += 40;
 
-        //auto-scroll
-        if (nextX > 700) {
-                notesLayer.style.transform = `translateX(${700 - nextX}px)`;
-        }
+  //auto-scroll
+  if (nextX > 700) {
+          notesLayer.style.transform = `translateX(${700 - nextX}px)`;
+  }
 
-        document.getElementById("current-note").textContent = note; //update "now playing"
+  document.getElementById("current-note").textContent = note; //update "now playing"
 }
 
+//record button handler
 document.getElementById("record").onclick = async () => {
-        if (!writer) {
-                appendLog("Please connect first.\n");
-                return;
-        }
-        if (!isRecording) {
-                isRecording = true;
-                await writer.write(new TextEncoder().encode("R"));
-                document.getElementById("record").textContent = "Stop Recording";
-                appendLog("Started recording.\n");
-        } else {
-                isRecording = false;
-                await writer.write(new TextEncoder().encode("r"));
-                document.getElementById("record").textContent = "Record";
-                appendLog("Stopped recording.\n");
-        }
+  if (!writer) {
+          appendLog("Please connect first.\n");
+          return;
+  }
+  if (!isRecording) {
+    //start
+    isRecording = true;
+    recBuffer = ""; 
+    recActive = false;
+    await writer.write(new TextEncoder().encode("R"));
+    document.getElementById("record").textContent = "Stop Recording";
+    appendLog("Recording started...");
+  } else {
+      // STOP
+    isRecording = false;
+    await writer.write(new TextEncoder().encode("r"));
+    document.getElementById("record").textContent = "Record";
+    appendLog("Recording stopped. Waiting for data...");
+  }
 };
 
 function appendLog(message) {

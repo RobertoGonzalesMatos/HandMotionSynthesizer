@@ -21,14 +21,11 @@ void setup() {
   
   initGPT();
   mpuInit();
-  harmonyInit();
 }
 
 void loop() {
   while (Serial.available() > 0) {
     char c = Serial.read();
-
-
     if (c == '\r' || c == '\n') continue;
 
     // ---- Recording / Playback controls ----
@@ -69,14 +66,12 @@ void loop() {
         continue;
       }
     if (c == 'd') {        // Drum Mode on
-      drumMode = !drumMode;
+      drumMode = 1;
+      playNote(440);
       continue;
     }
     }
   }
-
-  // Update harmony controls + associated variables
-  updateHaromnyControls();
 
   // Service playback if active
   servicePlaybackTick();
@@ -86,4 +81,3 @@ void loop() {
     pollIMUAndUpdatePitch();
   }
 }
-
