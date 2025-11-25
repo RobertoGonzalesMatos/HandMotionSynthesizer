@@ -64,9 +64,13 @@
                 <section id="record-container">
                         <h2>Record</h2>
                         <p>Select to record and save your synthesizer sounds.</p>
-                        <button id="record">Record</button>
-        
+                        <button id="record">Record 🎤︎︎</button>
+                        <div id="post-recording" class="hidden">
+                                <button id="save">Save ☑</button> 
+                                <button id="discard">Discard ×</button>
+                        </div>
                 </section>
+                
         </section>
 
 
@@ -216,15 +220,13 @@ function handleRecordingLine(line) {
 
   //if JSON array is complete
   if (recBuffer.endsWith("]")) {
-      finalizeRecording(recBuffer);
       recActive = false;
-      recBuffer = "";
+      appendLog("Full recording received.");
   }
 }
 
 //Finalize + save recording
 function finalizeRecording(jsonString) {
-  appendLog("Full recording received.");
   try {
       const events = JSON.parse(jsonString);
 
@@ -285,13 +287,15 @@ document.getElementById("record").onclick = async () => {
     recBuffer = ""; 
     recActive = false;
     await writer.write(new TextEncoder().encode("R"));
-    document.getElementById("record").textContent = "Stop Recording";
+    document.getElementById("record").textContent = "Stop Recording ⊘";
     appendLog("Recording started...");
   } else {
       // STOP
     isRecording = false;
     await writer.write(new TextEncoder().encode("r"));
-    document.getElementById("record").textContent = "Record";
+    document.getElementById("record").textContent = "Record 🎤︎︎";
+    document.getElementById("record").classList.add("hidden");
+    document.getElementById("post-recording").classList.remove("hidden");
     appendLog("Recording stopped. Waiting for data...");
   }
 };
@@ -301,7 +305,21 @@ function appendLog(message) {
         log.textContent += message + "\n";
         log.scrollTop = log.scrollHeight;
 }
-  </script>
+
+document.getElementById("save").onclick = () => {
+  finalizeRecording(recBuffer);
+  document.getElementById("post-recording").classList.add("hidden");
+  document.getElementById("record").classList.remove("hidden");
+};
+
+document.getElementById("discard").onclick = () => {
+  recBuffer = "";
+  document.getElementById("post-recording").classList.add("hidden");
+  document.getElementById("record").classList.remove("hidden");
+  appendLog("Recording discarded.");
+};
+
+</script>
 
 </body>
 
