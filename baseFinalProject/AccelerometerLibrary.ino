@@ -224,6 +224,158 @@ static inline int quantizeWithHys(float semi_cont) {
   return lastSemi;
 }
 
+// =====================================================
+// ============= DRUM / GESTURE SUPPORT =================
+// =====================================================
+
+// Simple "drum" base frequencies
+static const int KICK_FREQ   = 60;    // low
+static const int SNARE_FREQ  = 220;   // snappy
+static const int TOM_FREQ    = 140;   // mid-low
+static const int HAT_FREQ    = 800;   // bright
+static const int RIDE_FREQ   = 450;   // metallic-ish?
+static const int CYMBAL_FREQ = 1200;  // rings
+
+// === ADSR envelope model for drums ===
+
+struct DrumEnvelope {
+  float attackMs;   // A: time from 0 -> 1
+  float decayMs;    // D: time from 1 -> sustain
+  float sustainMs;  // S: hold at sustainLevel
+  float releaseMs;  // R: time from sustainLevel -> 0
+  float sustainLevel; // sustain amplitude (0..1)
+};
+
+struct DrumState {
+  bool          active;
+  int           freq;
+  unsigned long startMs;
+  DrumEnvelope  env;
+};
+
+// ADSR setting, might need to tweak
+static const DrumEnvelope KICK_ENV   = { 5.0f, 40.0f,  30.0f,  60.0f, 0.3f };
+static const DrumEnvelope SNARE_ENV  = { 2.0f, 30.0f,  20.0f,  80.0f, 0.2f };
+static const DrumEnvelope TOM_ENV    = { 3.0f, 40.0f,  40.0f,  80.0f, 0.35f };
+static const DrumEnvelope HAT_ENV    = { 1.0f, 10.0f,  20.0f,  40.0f, 0.15f };
+static const DrumEnvelope RIDE_ENV   = { 3.0f, 50.0f, 120.0f, 150.0f, 0.4f };
+static const DrumEnvelope CYMBAL_ENV = { 2.0f, 60.0f, 150.0f, 200.0f, 0.4f };
+
+static DrumState drum = { false, 0, 0, {0,0,0,0,0} };
+
+static inline void setDrumLevel(float level) {
+  // Control volume
+  //   - PWM duty cycle
+  //   - DAC amplitude
+  //   - your own "setVolume(level)" function.
+  (void)level;
+}
+
+// Compute ADSR level at time t (ms since note start)
+static float evalEnvelope(const DrumEnvelope &env, float tMs) {
+  float A = env.attackMs;
+  float D = env.decayMs;
+  float S = env.sustainMs;
+  float R = env.releaseMs;
+  float sL = env.sustainLevel;
+
+  if (tMs < 0.0f) tMs = 0.0f;
+
+  // Attack: 0 -> 1
+  if (tMs < A) {
+    if (A <= 0.0f) return 1.0f;
+    return tMs / A;
+  }
+  tMs -= A;
+
+  // Decay: 1 -> sustainLevel
+  if (tMs < D) {
+    if (D <= 0.0f) return sL;
+    float x = tMs / D;
+    return 1.0f + (sL - 1.0f) * x;  // linear
+  }
+  tMs -= D;
+
+  // Sustain: hold sustainLevel
+  if (tMs < S) {
+    return sL;
+  }
+  tMs -= S;
+
+  // Release: sustainLevel -> 0
+  if (tMs < R) {
+    if (R <= 0.0f) return 0.0f;
+    float x = tMs / R;
+    return sL * (1.0f - x);  // linear fade out
+  }
+
+  return 0.0f;
+}
+
+// Start a drum hit with ADSR, non-blocking
+static inline void playDrumADSR(int freq, const DrumEnvelope &env, unsigned long now) {
+  doStop();
+
+  drum.active  = true;
+  drum.freq    = freq;
+  drum.startMs = now;
+  drum.env     = env;
+
+  setDrumLevel(0.0f);
+  playNote(freq);
+}
+
+// Called regularly to evolve the envelope and stop when done
+static inline void pollDrum(unsigned long now) {
+  if (!drum.active) return;
+
+  float tMs = (float)(now - drum.startMs);
+  float level = evalEnvelope(drum.env, tMs);
+
+  if (level <= 0.001f) {
+    // Envelope finished: stop the sound
+    stopPlay();
+    drum.active = false;
+    setDrumLevel(0.0f);
+    return;
+  }
+
+  // Update amplitude here (once you have real volume control)
+  setDrumLevel(level);
+}
+
+// === Gesture functions: call these from the FSM ===
+static inline void Kick(unsigned long now) {
+  Serial.println(F("[DRUM] Kick"));
+  playDrumADSR(KICK_FREQ, KICK_ENV, now);
+}
+
+static inline void Snare(unsigned long now) {
+  Serial.println(F("[DRUM] Snare"));
+  playDrumADSR(SNARE_FREQ, SNARE_ENV, now);
+}
+
+static inline void Tom(unsigned long now) {
+  Serial.println(F("[DRUM] Tom"));
+  playDrumADSR(TOM_FREQ, TOM_ENV, now);
+}
+
+static inline void Hat(unsigned long now) {
+  Serial.println(F("[DRUM] Hat"));
+  playDrumADSR(HAT_FREQ, HAT_ENV, now);
+}
+
+static inline void Ride(unsigned long now) {
+  Serial.println(F("[DRUM] Ride"));
+  playDrumADSR(RIDE_FREQ, RIDE_ENV, now);
+}
+
+static inline void Cymbal(unsigned long now) {
+  Serial.println(F("[DRUM] Cymbal"));
+  playDrumADSR(CYMBAL_FREQ, CYMBAL_ENV, now);
+}
+
+
 // ===== updateFSM (same style as your snake code) =====
 // xRead = targetFreqHz, yRead = vibrato Hz, zRead = yaw_deg
 full_state updateFSM(full_state currState,
@@ -332,127 +484,60 @@ full_state updateFSM(full_state currState,
         ret.state = s_REG_WAIT;
         break;
       }
-      // 4-5 (a..f): gesture hits; placeholders for now
+      // 4-5 (a..f): gesture hits
       if (fiveMs && !buttonOn) {
-        if (xRead < -25.0f) { Serial.println(F("Kick!"));   ret.state = s_GESTURE_CALC; ret.savedClock = clock; break; }
-        if (xRead >  25.0f) { Serial.println(F("Snare!"));  ret.state = s_GESTURE_CALC; ret.savedClock = clock; break; }
-        if (yRead >  25.0f) { Serial.println(F("Tom!"));    ret.state = s_GESTURE_CALC; ret.savedClock = clock; break; }
-        if (yRead < -25.0f) { Serial.println(F("Hat!"));    ret.state = s_GESTURE_CALC; ret.savedClock = clock; break; }
-        if (zRead >  25.0f) { Serial.println(F("Ride!"));   ret.state = s_GESTURE_CALC; ret.savedClock = clock; break; }
-        if (zRead < -25.0f) { Serial.println(F("Cymbal!")); ret.state = s_GESTURE_CALC; ret.savedClock = clock; break; }
+          // X axis: DOWN  -> Kick
+          if (xRead < -25.0f) {
+              Serial.println(F("Kick!"));
+              Kick(clock);
+              ret.state = s_GESTURE_CALC;
+              ret.savedClock = clock;
+              break;
+          }
+
+          // X axis: UP -> Snare 
+          if (xRead >  25.0f) {
+              Serial.println(F("Snare!"));
+              Snare(clock);
+              ret.state = s_GESTURE_CALC;
+              ret.savedClock = clock;
+              break;
+          }
+
+          // Y axis: RIGHT -> Tom
+          if (yRead >  25.0f) {
+              Serial.println(F("Tom!"));
+              Tom(clock);
+              ret.state = s_GESTURE_CALC;
+              ret.savedClock = clock;
+              break;
+          }
+
+          // Y axis: LEFT -> Hi-hat
+          if (yRead < -25.0f) {
+              Serial.println(F("Hat!"));
+              Hat(clock);
+              ret.state = s_GESTURE_CALC;
+              ret.savedClock = clock;
+              break;
+          }
+
+          // Z axis: RIGHT -> Ride
+          if (zRead >  25.0f) {
+              Serial.println(F("Ride!"));
+              Ride(clock);
+              ret.state = s_GESTURE_CALC;
+              ret.savedClock = clock;
+              break;
+          }
+
+          // Z axis: LEFT -> Crash/Cymbal
+          if (zRead < -25.0f) {
+              Serial.println(F("Cymbal!"));
+              Cymbal(clock);
+              ret.state = s_GESTURE_CALC;
+              ret.savedClock = clock;
+              break;
+          }
       }
       break;
-
-    case s_GESTURE_CALC:
-      // 5-4: wait 5ms then return to gesture wait
-      if (fiveMs && !buttonOn) {
-        Serial.println(F("t 5–4: back to gesture wait"));
-        pet_watchdog();
-        ret.savedClock = clock;
-        ret.state = s_GESTURE_WAIT;
-      }
-      break;
-  }
-
-  return ret;
-}
-
-// ===== Main polling function: read IMU, update orientation, call FSM =====
-void pollIMUAndUpdatePitch() {
-  unsigned long now = millis();
-  if (now - lastIMUms < IMU_DT_MS) return; // ~100 Hz
-  lastIMUms = now;
-
-  // 1) Read raw IMU
-  int16_t axr, ayr, azr, gxr, gyr, gzr;
-  if (!mpuReadRaw(axr, ayr, azr, gxr, gyr, gzr)) return;
-
-  // Convert raw to physical units
-  float ax_g = (float)axr / 16384.0f;
-  float ay_g = (float)ayr / 16384.0f;
-  float az_g = (float)azr / 16384.0f;
-  float gx_dps = (float)gxr / 131.0f;
-  float gy_dps = (float)gyr / 131.0f;
-  float gz_dps = (float)gzr / 131.0f;
-
-  // 2) Apply mounting transform
-  float ux, uy, uz;
-  applyMount(ax_g, ay_g, az_g, ux, uy, uz);
-
-  // 3) Accel-only reference angles
-  float pitch_acc = atan2f(-ux, sqrtf(uy*uy + uz*uz)) * 180.0f / PI;
-  float roll_acc  = atan2f( uy, uz ) * 180.0f / PI;
-
-  // 4) Complementary filter
-  float dt = (last_t_ms == 0) ? (IMU_DT_MS / 1000.0f)
-                              : (now - last_t_ms) / 1000.0f;
-  last_t_ms = now;
-  pitch_est = CF_ALPHA * (pitch_est + gy_dps * dt) + (1.0f - CF_ALPHA) * pitch_acc;
-  roll_est  = CF_ALPHA * (roll_est  + gx_dps * dt) + (1.0f - CF_ALPHA) * roll_acc;
-
-  // 5) Yaw integrate with bias adaptation
-  if (fabsf(gz_dps) < CALM_GZ_DPS)
-    yaw_bias_dps = (1.0f - YAW_BIAS_ALPHA) * yaw_bias_dps + YAW_BIAS_ALPHA * gz_dps;
-  yaw_deg += (gz_dps - yaw_bias_dps) * dt;
-
-  // 6) Map pitch->freq (same as working file)
-  if (baseFreq > 0) {
-    float norm = (pitch_est - PITCH_MIN_DEG) / (PITCH_MAX_DEG - PITCH_MIN_DEG);
-    if (norm < 0.0f) norm = 0.0f;
-    if (norm > 1.0f) norm = 1.0f;
-
-    float semi_cont = norm * TILT_RANGE_SEMITONES;
-    int   semi_disc = quantizeWithHys(semi_cont);
-    float f = (float)baseFreq * powf(2.0f, semi_disc / 12.0f);
-    if (f < 50.0f)   f = 50.0f;
-    if (f > 4000.0f) f = 4000.0f;
-    targetFreqHz = (int)f;
-  } else {
-    targetFreqHz = 0;
-  }
-
-  // 7) Vibrato suggestion from roll (bucket -> Hz)
-  float roll_deg = roll_est;
-  if (roll_deg < 0.0f)  roll_deg = 0.0f;
-  if (roll_deg > 90.0f) roll_deg = 90.0f;
-  int vibLevel;
-  if      (roll_deg < 15.0f) vibLevel = 0;
-  else if (roll_deg < 35.0f) vibLevel = 1;
-  else if (roll_deg < 60.0f) vibLevel = 2;
-  else                       vibLevel = 3;
-  if (vibLevel != lastVibLevel) lastVibLevel = vibLevel;
-  float desiredVibRate = vibRates[lastVibLevel < 0 ? 0 : lastVibLevel];
-
-  // 8) ==== FSM CALL (drives play/stop/vibrato per your table) ====
-  const bool button = readButton();
-  // xRead = freq, yRead = vibRate, zRead = yaw
-  FS = updateFSM(FS, (float)targetFreqHz, desiredVibRate, yaw_deg, button, now);
-
-  // ---- Optional debug note print ----
-  if (targetFreqHz != lastAnnouncedHz) {
-    Serial.print(F("[note] -> "));
-    printHzAndNote(targetFreqHz);
-    Serial.println();
-    lastAnnouncedHz = targetFreqHz;
-  }
-}
-
-static const char* NOTE12[12] =
-  {"C","C#","D","D#","E","F","F#","G","G#","A","A#","B"};
-
-static inline int hzToMidi(int hz) {
-  if (hz <= 0) return 0;
-  float n = 69.0f + 12.0f * (log((float)hz / 440.0f) / log(2.0f)); // A4=440 -> 69
-  return (int)lroundf(n);
-}
-
-static inline void printHzAndNote(int hz) {
-  int midi = hzToMidi(hz);
-  const char* name = NOTE12[(midi % 12 + 12) % 12];
-  int octave = midi / 12 - 1;
-  Serial.print(hz);
-  Serial.print(F(" Hz ("));
-  Serial.print(name);
-  Serial.print(octave);
-  Serial.print(')');
-}
