@@ -74,6 +74,10 @@ void loop() {
     }
   }
 
+  // Uncomment these lines to run FSM tests
+  testAll();
+  while(true);
+
   // Update harmony controls + associated variables
   updateHaromnyControls();
 
