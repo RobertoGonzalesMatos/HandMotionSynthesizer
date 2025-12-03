@@ -3,7 +3,7 @@
 
 extern int   curFreq;
 extern int   baseFreq;
-extern bool    drumMode;
+extern int    drumMode;
 int keyToFreq(char c);
 
 extern void mpuInit();
@@ -21,6 +21,7 @@ void setup() {
   
   initGPT();
   mpuInit();
+  harmonyInit();
 }
 
 void loop() {
@@ -72,6 +73,9 @@ void loop() {
     }
     }
   }
+
+  // Update harmony controls + associated variables
+  updateHaromnyControls();
 
   // Service playback if active
   servicePlaybackTick();
