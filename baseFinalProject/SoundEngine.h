@@ -17,12 +17,21 @@ typedef enum {
 } fsm_state;
 
 typedef struct {
-  unsigned long noteFrequency;
-  unsigned long vibratoLevel;
-  bool          gestureModeOn;
-  unsigned long savedClock;
-  fsm_state state;
-  bool harmonies[3];
+    unsigned long noteFrequency;
+    unsigned long vibratoLevel;
+    bool          gestureModeOn;
+    unsigned long savedClock;
+    fsm_state     state;
+    bool          harmonies[3];
+
+    // New IMU state
+    float pitch_est;
+    float roll_est;
+    float yaw_deg;
+    float yaw_bias_dps;
+
+    unsigned long last_t_ms; 
+
 } full_state;
 
 // -----------------------------

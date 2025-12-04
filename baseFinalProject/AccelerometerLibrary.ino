@@ -7,7 +7,6 @@
 // ===== GLOBAL FSM INSTANCE =====
 // Start with 0 so first valid targetFreqHz will trigger a play.
 static full_state FS = {0, 0, false, 0, s_INIT};
-
 // ===== External audio interface (implemented elsewhere in your project) =====
 extern int  baseFreq;
 extern void playNote(int freq);
@@ -228,238 +227,295 @@ static inline int quantizeWithHys(float semi_cont) {
   return lastSemi;
 }
 
-// ===== updateFSM (same style as your snake code) =====
-// xRead = targetFreqHz, yRead = vibrato Hz, zRead = yaw_deg
 full_state updateFSM(full_state currState,
-                     float xRead, float yRead, float zRead,
-                     bool buttonOn, unsigned long clock) {
-  full_state ret = currState;
-  bool fiveMs = (clock - currState.savedClock) >= 5;
+                     float ax_g, float ay_g, float az_g,
+                     float gx_dps, float gy_dps, float gz_dps,
+                     unsigned long clock)
+{
+    full_state ret = currState;
+    bool fiveMs = (clock - currState.savedClock) >= 5;
 
-  switch (currState.state) {
-    case s_INIT:
-      // Start playing once we have a valid freq AND yaw is in the play band
-      if (xRead > 0.0f && fabsf(zRead) <= PLAY_BAND_DEG) {
-        Serial.println(F("t 1–2: init → reg_calc (start note)"));
-        ret.noteFrequency = (unsigned long)xRead;
-        vibForceStop();
-        curFreq = (int)ret.noteFrequency;
-        playNote(curFreq);
-        notePlaying = true;
+    // ===== TIME DELTA FOR COMPLEMENTARY FILTER =====
+    float dt;
+    if (currState.last_t_ms == 0)
+        dt = IMU_DT_MS / 1000.0f;
+    else
+        dt = (clock - currState.last_t_ms) / 1000.0f;
+    ret.last_t_ms = clock;
 
-        ret.savedClock = clock;
-        ret.state = s_REG_CALC;
-      }
-      break;
+    // ===== REGULAR (NON-GESTURE) MODE COMPUTATION =====
+    if (!drumMode)
+    {
+        //
+        // ---- 1. MOUNTING TRANSFORM ----
+        //
+        float ux, uy, uz;
+        computeMountTransform(ax_g, ay_g, az_g, ux, uy, uz);
 
-    case s_REG_CALC:
-      // 2-3: (clock - savedClock) >= 5 ∧ ¬buttonOn
-      if (fiveMs && !drumMode) {
-        Serial.println(F("t 2–3: reg_calc → reg_wait"));
-        pet_watchdog();
-        ret.savedClock = clock;
-        ret.state = s_REG_WAIT;
-      }
-      break;
-      Serial.println("staying in rec_calc");
+        //
+        // ---- 2. ACCEL ANGLES ----
+        //
+        float pitch_acc, roll_acc;
+        computeAccelAngles(ux, uy, uz, pitch_acc, roll_acc);
 
-    case s_REG_WAIT:
-      // Silence condition: yaw out of band OR no valid freq → stop.
-      if (fiveMs && !drumMode &&
-          (fabsf(zRead) > PLAY_BAND_DEG || xRead <= 0.0f)) {
-        Serial.println(F("t 3–2a: stop() (yaw out-of-band or no freq)"));
-        if (xRead <= 0.0f){
-Serial.println(F("t 3–2a: stop() (no freq)"));
+        //
+        // ---- 3. COMPLEMENTARY FILTER ----
+        //
+        applyComplementaryFilter(gx_dps, gy_dps,
+                                 pitch_acc, roll_acc,
+                                 dt,
+                                 ret.pitch_est, ret.roll_est);
+
+        //
+        // ---- 4. YAW UPDATE ----
+        //
+        updateYaw(gz_dps, dt,
+                  ret.yaw_bias_dps,
+                  ret.yaw_deg);
+
+        //
+        // ---- 5. PITCH → FREQ ----
+        //
+        ret.noteFrequency = computeTargetFreq(ret.pitch_est);
+
+        //
+        // ---- 6. COMPUTE VIBRATO BUCKET ----
+        //
+        int vibLevel;
+        float vibRateHz;
+        computeVibratoBucket(ret.roll_est, vibLevel, vibRateHz);
+        ret.vibratoLevel = vibLevel; 
+        float yRead = vibRateHz;
+
+        //
+        // These values now replace xRead, yRead, zRead
+        //
+        float xRead = (float)ret.noteFrequency;
+        float zRead = ret.yaw_deg;
+        bool  buttonOn = readButton();
+    }
+
+    // ===== GESTURE MODE (DRUM MODE) COMPUTATION =====
+    if (drumMode)
+    {
+        float gx, gy, gz;
+        computeGestureAxes(ax_g, ay_g, az_g, gx, gy, gz);
+
+        // For gesture mode, we temporarily store them here:
+        ret.noteFrequency = 0;       // no pitched note
+        ret.vibratoLevel = 0;
+        // re-map placeholders:
+        // xRead ≡ gx; yRead ≡ gy; zRead ≡ gz for gesture comparisons.
+    }
+
+    //
+    // -------------------------------------------------------------------------
+    //                           FINITE STATE MACHINE
+    // -------------------------------------------------------------------------
+    //
+
+    switch (currState.state)
+    {
+        case s_INIT:
+        {
+            float xRead = ret.noteFrequency;
+            float zRead = ret.yaw_deg;
+
+            if (xRead > 0.0f && fabsf(zRead) <= PLAY_BAND_DEG)
+            {
+                Serial.println(F("t 1–2: init → reg_calc (start note)"));
+                vibForceStop();
+                curFreq = (int)xRead;
+                playNote(curFreq);
+                notePlaying = true;
+
+                ret.savedClock = clock;
+                ret.state = s_REG_CALC;
+            }
+            break;
         }
-        Serial.println("NOTE:0");
-        doStop();
-        ret.savedClock = clock;
-        ret.state = s_REG_CALC;
-        break;
-      }
 
-      // Start playing if we are silent, have a freq, and yaw is in band
-      if (fiveMs && !drumMode && !notePlaying &&
-          xRead > 0.0f && fabsf(zRead) <= PLAY_BAND_DEG) {
-        Serial.println(F("t 3–2: start note (was silent)"));
-        vibForceStop();
-        ret.noteFrequency = (unsigned long)xRead;
-        curFreq = (int)ret.noteFrequency;
-        playNote(curFreq);
-        notePlaying = true;
-        ret.savedClock = clock;
-        ret.state = s_REG_CALC;
-        break;
-      }
-
-      // Apply vibrato if we are playing and yRead > 0
-      if (fiveMs && !drumMode && notePlaying && yRead > 0.0f) {
-        Serial.println(F("t 3–2b: vibrato()"));
-        vibApply(yRead);
-        ret.vibratoLevel = (unsigned long)yRead;
-        pet_watchdog();
-        ret.savedClock = clock;
-        ret.state = s_REG_CALC;
-        break;
-      }
-
-      // Retune if frequency changed significantly
-      if (fiveMs && !drumMode &&
-          fabsf(xRead - (float)currState.noteFrequency) > 1.0f) {
-        Serial.println(F("t 3–2c: playNote(retune)"));
-        vibForceStop();
-        ret.noteFrequency = (unsigned long)xRead;
-
-        if (ret.noteFrequency > 0 && fabsf(zRead) <= PLAY_BAND_DEG) {
-          curFreq = (int)ret.noteFrequency;
-          playNote(curFreq);
-          notePlaying = true;
-        } else {
-          // If freq is invalid or yaw is out of band, we go silent
-          doStop();
+        case s_REG_CALC:
+        {
+            if (fiveMs && !drumMode)
+            {
+                Serial.println(F("t 2–3: reg_calc → reg_wait"));
+                pet_watchdog();
+                ret.savedClock = clock;
+                ret.state = s_REG_WAIT;
+            }
+            break;
         }
 
-        ret.savedClock = clock;
-        ret.state = s_REG_CALC;
-        break;
-      }
+        case s_REG_WAIT:
+        {
+            float xRead = (float)ret.noteFrequency;
+            float zRead = ret.yaw_deg;
+            float yRead = vibRates[ret.vibratoLevel];
 
-      // 3-4: toggle to Drum Mode
-      if (drumMode && !currState.gestureModeOn) {
-        Serial.println(F("t 3–4: You are in Drum Mode!"));
-        ret.gestureModeOn = true;
-        ret.state = s_GESTURE_WAIT;
-      }
-      break;
-      Serial.println("staying in red_wait");
+            // ---- Silence condition ----
+            if (fiveMs && !drumMode &&
+                (fabsf(zRead) > PLAY_BAND_DEG || xRead <= 0.0f))
+            {
+                Serial.println(F("t 3–2a: stop() (yaw out-of-band or no freq)"));
 
-    case s_GESTURE_WAIT:
-      // 4-3: toggle back to Regular Mode
-      if (drumMode && currState.gestureModeOn) {
-        Serial.println(F("t 4–3: You are in Regular Mode!"));
-        ret.gestureModeOn = false;
-        ret.state = s_REG_WAIT;
-        break;
-      }
-      // 4-5 (a..f): gesture hits; placeholders for now
-      if (fiveMs && !drumMode) {
-        if (xRead < -25.0f) { Serial.println(F("Kick!"));   ret.state = s_GESTURE_CALC; ret.savedClock = clock; break; }
-        if (xRead >  25.0f) { Serial.println(F("Snare!"));  ret.state = s_GESTURE_CALC; ret.savedClock = clock; break; }
-        if (yRead >  25.0f) { Serial.println(F("Tom!"));    ret.state = s_GESTURE_CALC; ret.savedClock = clock; break; }
-        if (yRead < -25.0f) { Serial.println(F("Hat!"));    ret.state = s_GESTURE_CALC; ret.savedClock = clock; break; }
-        if (zRead >  25.0f) { Serial.println(F("Ride!"));   ret.state = s_GESTURE_CALC; ret.savedClock = clock; break; }
-        if (zRead < -25.0f) { Serial.println(F("Cymbal!")); ret.state = s_GESTURE_CALC; ret.savedClock = clock; break; }
-      }
-      break;
+                if (xRead <= 0.0f)
+                    Serial.println(F("t 3–2a: stop() (no freq)"));
 
-    case s_GESTURE_CALC:
-      // 5-4: wait 5ms then return to gesture wait
-      if (fiveMs && !drumMode) {
-        Serial.println(F("t 5–4: back to gesture wait"));
-        pet_watchdog();
-        ret.savedClock = clock;
-        ret.state = s_GESTURE_WAIT;
-      }
-      break;
-  }
+                Serial.println("NOTE:0");
+                doStop();
 
-  return ret;
+                ret.savedClock = clock;
+                ret.state = s_REG_CALC;
+                break;
+            }
+
+            // ---- Start note if silent and okay ----
+            if (fiveMs && !drumMode && !notePlaying &&
+                xRead > 0.0f && fabsf(zRead) <= PLAY_BAND_DEG)
+            {
+                Serial.println(F("t 3–2: start note (was silent)"));
+                vibForceStop();
+                curFreq = (int)xRead;
+                playNote(curFreq);
+                notePlaying = true;
+
+                ret.savedClock = clock;
+                ret.state = s_REG_CALC;
+                break;
+            }
+
+            // ---- Vibrato ----
+            if (fiveMs && !drumMode && notePlaying && yRead > 0.0f)
+            {
+                Serial.println(F("t 3–2b: vibrato()"));
+                vibApply(yRead);
+                ret.savedClock = clock;
+                ret.state = s_REG_CALC;
+                break;
+            }
+
+            // ---- Retune ----
+            if (fiveMs && !drumMode &&
+                fabsf(ret.noteFrequency - currState.noteFrequency) > 1.0f)
+            {
+                Serial.println(F("t 3–2c: playNote(retune)"));
+                vibForceStop();
+
+                if (ret.noteFrequency > 0 &&
+                    fabsf(zRead) <= PLAY_BAND_DEG)
+                {
+                    curFreq = (int)ret.noteFrequency;
+                    playNote(curFreq);
+                    notePlaying = true;
+                }
+                else
+                {
+                    doStop();
+                }
+
+                ret.savedClock = clock;
+                ret.state = s_REG_CALC;
+                break;
+            }
+
+            // ---- Switch to drum mode ----
+            if (drumMode && !currState.gestureModeOn)
+            {
+                Serial.println(F("t 3–4: You are in Drum Mode!"));
+                ret.gestureModeOn = true;
+                ret.state = s_GESTURE_WAIT;
+            }
+            break;
+        }
+
+        case s_GESTURE_WAIT:
+        {
+            float gx, gy, gz;
+            computeGestureAxes(ax_g, ay_g, az_g, gx, gy, gz);
+
+            // Back to regular mode
+            if (drumMode && currState.gestureModeOn)
+            {
+                Serial.println(F("t 4–3: You are in Regular Mode!"));
+                ret.gestureModeOn = false;
+                ret.state = s_REG_WAIT;
+                break;
+            }
+
+            if (fiveMs && !drumMode)
+            {
+                if (gx < -25.0f) { Serial.println("Kick!");   ret.state = s_GESTURE_CALC; ret.savedClock = clock; break; }
+                if (gx >  25.0f) { Serial.println("Snare!");  ret.state = s_GESTURE_CALC; ret.savedClock = clock; break; }
+                if (gy >  25.0f) { Serial.println("Tom!");    ret.state = s_GESTURE_CALC; ret.savedClock = clock; break; }
+                if (gy < -25.0f) { Serial.println("Hat!");    ret.state = s_GESTURE_CALC; ret.savedClock = clock; break; }
+                if (gz >  25.0f) { Serial.println("Ride!");   ret.state = s_GESTURE_CALC; ret.savedClock = clock; break; }
+                if (gz < -25.0f) { Serial.println("Cymbal!"); ret.state = s_GESTURE_CALC; ret.savedClock = clock; break; }
+            }
+            break;
+        }
+
+        case s_GESTURE_CALC:
+        {
+            if (fiveMs && !drumMode)
+            {
+                Serial.println(F("t 5–4: back to gesture wait"));
+                pet_watchdog();
+                ret.savedClock = clock;
+                ret.state = s_GESTURE_WAIT;
+            }
+            break;
+        }
+    }
+
+    return ret;
 }
 
-// ===== Main polling function: read IMU, update orientation, call FSM =====
+
 void pollIMUAndUpdatePitch() {
-  // IMU control is disabled while playback is active
 
-  unsigned long now = millis();
-  if (now - lastIMUms < IMU_DT_MS) return; // ~100 Hz
-  lastIMUms = now;
+    unsigned long now = millis();
+    if (now - lastIMUms < IMU_DT_MS)
+        return;
+    lastIMUms = now;
 
-  // 1) Read raw IMU
-  int16_t axr, ayr, azr, gxr, gyr, gzr;
-  if (!mpuReadRaw(axr, ayr, azr, gxr, gyr, gzr)) return;
+    // ---- Read IMU raw ----
+    int16_t axr, ayr, azr, gxr, gyr, gzr;
+    if (!mpuReadRaw(axr, ayr, azr, gxr, gyr, gzr))
+        return;
 
-  // Convert raw to physical units
-  float ax_g = (float)axr / 16384.0f;
-  float ay_g = (float)ayr / 16384.0f;
-  float az_g = (float)azr / 16384.0f;
-  float gx_dps = (float)gxr / 131.0f;
-  float gy_dps = (float)gyr / 131.0f;
-  float gz_dps = (float)gzr / 131.0f;
+    // ---- Convert to physical units ----
+    float ax_g   = (float)axr / 16384.0f;
+    float ay_g   = (float)ayr / 16384.0f;
+    float az_g   = (float)azr / 16384.0f;
 
-  // 2) Apply mounting transform
-  float ux, uy, uz;
-  applyMount(ax_g, ay_g, az_g, ux, uy, uz);
+    float gx_dps = (float)gxr / 131.0f;
+    float gy_dps = (float)gyr / 131.0f;
+    float gz_dps = (float)gzr / 131.0f;
 
-  // 3) Accel-only reference angles
-  float pitch_acc = atan2f(-ux, sqrtf(uy*uy + uz*uz)) * 180.0f / PI;
-  float roll_acc  = atan2f( uy, uz ) * 180.0f / PI;
+    // ---- FSM CALL ----
+    FS = updateFSM(FS, ax_g, ay_g, az_g,
+                       gx_dps, gy_dps, gz_dps,
+                       now);
 
-  // 4) Complementary filter
-  float dt = (last_t_ms == 0) ? (IMU_DT_MS / 1000.0f)
-                              : (now - last_t_ms) / 1000.0f;
-  last_t_ms = now;
-  pitch_est = CF_ALPHA * (pitch_est + gy_dps * dt) + (1.0f - CF_ALPHA) * pitch_acc;
-  roll_est  = CF_ALPHA * (roll_est  + gx_dps * dt) + (1.0f - CF_ALPHA) * roll_acc;
+    // ---- Recording ----
+    if (isRecording()) {
+        int effective = notePlaying ? curFreq : 0;
+        recordSample(effective);
+    }
 
-  // 5) Yaw integrate with bias adaptation
-  if (fabsf(gz_dps) < CALM_GZ_DPS)
-    yaw_bias_dps = (1.0f - YAW_BIAS_ALPHA) * yaw_bias_dps + YAW_BIAS_ALPHA * gz_dps;
-  yaw_deg += (gz_dps - yaw_bias_dps) * dt;
-
-  // 6) Map pitch->freq
-  if (baseFreq > 0) {
-    float norm = (pitch_est - PITCH_MIN_DEG) / (PITCH_MAX_DEG - PITCH_MIN_DEG);
-    if (norm < 0.0f) norm = 0.0f;
-    if (norm > 1.0f) norm = 1.0f;
-
-    float semi_cont = norm * TILT_RANGE_SEMITONES;
-    int   semi_disc = quantizeWithHys(semi_cont);
-    float f = (float)baseFreq * powf(2.0f, semi_disc / 12.0f);
-    if (f < 50.0f)   f = 50.0f;
-    if (f > 4000.0f) f = 4000.0f;
-    targetFreqHz = (int)f;
-  } else {
-    targetFreqHz = 0;
-  }
-
-  // 7) Vibrato suggestion from roll (bucket -> Hz)
-  float roll_deg = roll_est;
-  if (roll_deg < 0.0f)  roll_deg = 0.0f;
-  if (roll_deg > 90.0f) roll_deg = 90.0f;
-  int vibLevel;
-  if      (roll_deg < 15.0f) vibLevel = 0;
-  else if (roll_deg < 35.0f) vibLevel = 1;
-  else if (roll_deg < 60.0f) vibLevel = 2;
-  else                       vibLevel = 3;
-  if (vibLevel != lastVibLevel) lastVibLevel = vibLevel;
-  float desiredVibRate = vibRates[lastVibLevel < 0 ? 0 : lastVibLevel];
-
-  // 8) ==== FSM CALL (drives play/stop/vibrato per your table) ====
-  const bool button = readButton();
-
-  // xRead = freq, yRead = vibRate, zRead = yaw
-  
-  // 8) FSM call (drives play/stop/vibrato)
-  FS = updateFSM(FS, (float)targetFreqHz, desiredVibRate, yaw_deg, drumMode, now);
-  if (isRecording()) {
-      // Use the ACTUAL played frequency (curFreq), not targetFreqHz.
-      int effective = notePlaying ? curFreq : 0;
-      recordSample(effective);
-  }
-  // ---- print played note to Serial ----
-  if (notePlaying) {
-      // Instrument is playing → print current note if changed
-      if (curFreq != lastAnnouncedHz) {
-          sendNoteToSerial(curFreq);
-          lastAnnouncedHz = curFreq;
-      }
-  } else {
-      // Instrument is silent → print ONLY NOTE:0 (one time)
-      if (lastAnnouncedHz != 0) {
-          Serial.println("NOTE:0");
-          lastAnnouncedHz = 0;
-      }
-  }
+    // ---- NOTE output ----
+    if (notePlaying) {
+        if (curFreq != lastAnnouncedHz) {
+            sendNoteToSerial(curFreq);
+            lastAnnouncedHz = curFreq;
+        }
+    } else {
+        if (lastAnnouncedHz != 0) {
+            Serial.println("NOTE:0");
+            lastAnnouncedHz = 0;
+        }
+    }
 }
 
 // static const char* NOTE12[12] =
