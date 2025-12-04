@@ -15,6 +15,7 @@ extern void setVibrato(float vibRateHz);
 extern int  curFreq;
 extern bool drumMode;
 
+
 static int lastAnnouncedHz = -1;
 
 // ===== MPU-6050 register map and constants =====
@@ -34,7 +35,6 @@ unsigned long    lastIMUms    = 0;
 const unsigned long IMU_DT_MS = 10;  // IMU update ~100 Hz
 
 // ===== Mapping & ranges =====
-// Same as working version
 const float PITCH_MIN_DEG = -60.0f;
 const float PITCH_MAX_DEG =  60.0f;
 const float TILT_RANGE_SEMITONES = 24.0f;
@@ -76,7 +76,7 @@ const  float YAW_BIAS_ALPHA = 0.002f;
 const  float CALM_GZ_DPS    = 10.0f;
 
 // We only allow playing when yaw is near forward to act as a "gate".
-const  float PLAY_BAND_DEG  = 15.0f;      // ± yaw window, matches working code
+const  float PLAY_BAND_DEG  = 15.0f;      // ± yaw window
 
 // ===== Audio state =====
 static bool  notePlaying  = false;
@@ -85,26 +85,6 @@ static int   targetFreqHz = 0;
 // ===== Vibrato helpers =====
 static bool  vibActive        = false;
 static float vibCurrentRateHz = 0.0f;
-
-// ===== Recording / Playback state =====
-struct NoteEvent {
-  int           freq;      // 0 => silence
-  unsigned long duration;  // in ms
-};
-
-static const int MAX_EVENTS = 128;
-static NoteEvent recBuf[MAX_EVENTS];
-static int       recCount = 0;
-
-static bool      recActive      = false;
-static bool      playbackActive = false;
-
-static int       lastRecFreq    = -1;     // last freq we stored/are timing
-static unsigned long lastChangeMs = 0;    // when lastRecFreq started
-
-// Playback cursor
-static int       playIndex         = 0;
-static unsigned long playEventStartMs = 0;
 
 static inline void vibApply(float rateHz) {
   if (rateHz < 0.1f) {
@@ -137,9 +117,6 @@ static inline void doStop() {
   }
   vibForceStop();
 }
-
-bool isRecording()    { return recActive; }
-bool isPlayingBack()  { return playbackActive; }
 
 
 // ===== Stubs you can wire to hardware =====
@@ -289,6 +266,9 @@ full_state updateFSM(full_state currState,
       if (fiveMs && !drumMode &&
           (fabsf(zRead) > PLAY_BAND_DEG || xRead <= 0.0f)) {
         Serial.println(F("t 3–2a: stop() (yaw out-of-band or no freq)"));
+        if (xRead <= 0.0f){
+Serial.println(F("t 3–2a: stop() (no freq)"));
+        }
         Serial.println("NOTE:0");
         doStop();
         ret.savedClock = clock;
@@ -386,9 +366,8 @@ full_state updateFSM(full_state currState,
 
 // ===== Main polling function: read IMU, update orientation, call FSM =====
 void pollIMUAndUpdatePitch() {
-  if (playbackActive) {
-    return;
-  }
+  // IMU control is disabled while playback is active
+
   unsigned long now = millis();
   if (now - lastIMUms < IMU_DT_MS) return; // ~100 Hz
   lastIMUms = now;
@@ -425,7 +404,7 @@ void pollIMUAndUpdatePitch() {
     yaw_bias_dps = (1.0f - YAW_BIAS_ALPHA) * yaw_bias_dps + YAW_BIAS_ALPHA * gz_dps;
   yaw_deg += (gz_dps - yaw_bias_dps) * dt;
 
-  // 6) Map pitch->freq (same as working file)
+  // 6) Map pitch->freq
   if (baseFreq > 0) {
     float norm = (pitch_est - PITCH_MIN_DEG) / (PITCH_MAX_DEG - PITCH_MIN_DEG);
     if (norm < 0.0f) norm = 0.0f;
@@ -453,13 +432,13 @@ void pollIMUAndUpdatePitch() {
   if (vibLevel != lastVibLevel) lastVibLevel = vibLevel;
   float desiredVibRate = vibRates[lastVibLevel < 0 ? 0 : lastVibLevel];
 
-  // 8) ==== FSM CALL (drives play/stop/vibrato per your table) ====
-
-  // xRead = freq, yRead = vibRate, zRead = yaw
-  
+  // 8) FSM call (drives play/stop/vibrato)
   FS = updateFSM(FS, (float)targetFreqHz, desiredVibRate, yaw_deg, drumMode, now);
-
-
+  if (isRecording()) {
+      // Use the ACTUAL played frequency (curFreq), not targetFreqHz.
+      int effective = notePlaying ? curFreq : 0;
+      recordSample(effective);
+  }
   // ---- print played note to Serial ----
   if (notePlaying) {
       // Instrument is playing → print current note if changed
@@ -473,32 +452,6 @@ void pollIMUAndUpdatePitch() {
           Serial.println("NOTE:0");
           lastAnnouncedHz = 0;
       }
-    }
-
-
-
-  // 9) ==== Recording logic: record EFFECTIVE freq (played or silence) ====
-  if (recActive) {
-    int effectiveFreq = (notePlaying ? curFreq : 0);  // 0 == silence
-
-    if (lastRecFreq == -1) {
-      // First sample
-      lastRecFreq   = effectiveFreq;
-      lastChangeMs  = now;
-    } else if (effectiveFreq != lastRecFreq) {
-      // Close previous event
-      if (recCount < MAX_EVENTS) {
-        unsigned long dur = now - lastChangeMs;
-        if (dur > 0) {
-          recBuf[recCount].freq     = lastRecFreq;
-          recBuf[recCount].duration = dur;
-          recCount++;
-        }
-      }
-      // Start new event
-      lastRecFreq  = effectiveFreq;
-      lastChangeMs = now;
-    }
   }
 }
 
@@ -527,131 +480,5 @@ void sendNoteToSerial(int hz) {
   const char* name = NOTE12[(midi % 12 + 12) % 12];
 
   Serial.print("NOTE:");
-  Serial.println(name); //sends it as NOTE:C
-
-
-}
-
-
-//recording
-
-
-void stopRecording() {
-  if (!recActive) return;
-  recActive = false;
-
-  unsigned long now = millis();
-  if (lastRecFreq != -1 && recCount < MAX_EVENTS) {
-    unsigned long dur = now - lastChangeMs;
-    if (dur > 0) {
-      recBuf[recCount].freq     = lastRecFreq;
-      recBuf[recCount].duration = dur;
-      recCount++;
-    }
-  }
-  Serial.print("REC:[");
-  for (int i = 0; i < recCount; i++) {
-  Serial.print("{\"freq\":");
-  Serial.print(recBuf[i].freq);
-  Serial.print(",\"duration\":");
-  Serial.print(recBuf[i].duration);
-  Serial.print("}");
-  if (i < recCount - 1) Serial.print(",");
-}
-Serial.println("]");
-}
-
-void startRecording() {
-  // If we were playing back, stop that first
-  if (playbackActive) {
-    stopPlayback();
-  }
-
-  // Clear buffer
-  recCount     = 0;
-  lastRecFreq  = -1;
-  lastChangeMs = millis();
-
-  recActive      = true;
-  playbackActive = false;
-
-  Serial.println(F("[REC] started"));
-}
-
-void stopPlayback() {
-  if (!playbackActive) return;
-  playbackActive = false;
-
-  // Silence output
-  doStop();
-  curFreq = 0;
-
-  Serial.println(F("[PLAY] stopped"));
-}
-
-void startPlayback() {
-  // Finish recording if we were in record mode
-  if (recActive) {
-    stopRecording();
-  }
-
-  if (recCount == 0) {
-    Serial.println(F("[PLAY] no events to play"));
-    return;
-  }
-
-  // Reset playback cursor
-  playIndex        = 0;
-  playEventStartMs = millis();
-  playbackActive   = true;
-
-  Serial.print(F("[PLAY] starting, events="));
-  Serial.println(recCount);
-}
-
-void servicePlaybackTick() {
-  if (!playbackActive) return;
-
-  unsigned long now = millis();
-
-  if (playIndex >= recCount) {
-    // Finished
-    stopPlayback();
-    return;
-  }
-
-  NoteEvent &ev = recBuf[playIndex];
-
-  // If this is the first time for this event, or we just advanced, ensure correct note
-  int f = ev.freq;
-
-  if (f <= 0) {
-    // Silence event
-    if (notePlaying || curFreq != 0) {
-      stopPlay();
-      vibForceStop();
-      curFreq     = 0;
-      notePlaying = false;
-    }
-  } else {
-    if (!notePlaying || curFreq != f) {
-      vibForceStop();   // keep playback “clean”, no leftover vibrato state
-      curFreq     = f;
-      playNote(curFreq);
-      notePlaying = true;
-    }
-  }
-
-  // Check duration
-  unsigned long elapsed = now - playEventStartMs;
-  if (elapsed >= ev.duration) {
-    // Move to next event
-    playIndex++;
-    playEventStartMs = now;
-
-    if (playIndex >= recCount) {
-      stopPlayback();
-      return;
-    }
-  }
+  Serial.println(name); // sends it as NOTE:C
 }

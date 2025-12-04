@@ -1,6 +1,13 @@
 #ifndef SOUNDENGINE_H
 #define SOUNDENGINE_H
 
+// Forward declaration so functions can accept Voice&
+// The actual struct is defined in SoundEngine.cpp / .ino
+struct Voice;
+
+// -----------------------------
+// FSM State Types
+// -----------------------------
 typedef enum {
   s_INIT = 0,
   s_REG_CALC = 1,
@@ -12,17 +19,25 @@ typedef enum {
 typedef struct {
   unsigned long noteFrequency;
   unsigned long vibratoLevel;
-  bool gestureModeOn;
+  bool          gestureModeOn;
   unsigned long savedClock;
-  fsm_state state;
+  fsm_state     state;
+  bool harmonies[3];
 } full_state;
 
-void startRecording();      
-void stopRecording();      
-void startPlayback();       
-void stopPlayback();        
+// -----------------------------
+// Recording & Playback API
+// -----------------------------
+void startRecording();
+void stopRecording();
+
+void startPlayback();
+void stopPlayback();
+
 void servicePlaybackTick();
-bool isRecording();         
+
+bool isRecording();
 bool isPlayingBack();
+void recordSample(int freq);
 
 #endif
