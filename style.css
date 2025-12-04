@@ -1,30 +1,92 @@
 body {
-  font-family: "Inter", sans-serif;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  margin-top: 2em;
-  min-height: 100vh;
+    font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    display: flex;                /* side-by-side layout */
+    flex-direction: row;          /* horizontal row */
+    align-items: center;
+    align-content: center;
+    min-height: 100vh;  
+    
 
   /* Combined gradient + image */
-  background: linear-gradient(
+  background: 
+  linear-gradient(
       135deg,
       rgba(180, 203, 250, 0.6),
-      rgba(201, 220, 248, 0.6)
+      rgba(239, 244, 250, 0.6)
     ),
     url('background.png') no-repeat center center fixed;
   background-size: cover;
   background-position: center;
-  background-repeat: no-repeat;
+
 }
 
-header {
-  font-size: 1.5rem;
-  background: linear-gradient(90deg, #6a11cb, #2575fc);
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  transition: text-shadow 0.3s ease, color 0.3s ease;
+#left-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;   
+    
+}
+
+#middle-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;   
+    margin: 0;
+    padding-top: 20px; 
+    position: relative;
+    justify-content: flex-start;
+}
+
+#right-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;   
+}
+
+
+#modes-container {
+    width: 300px;
+    height: 200px;
+    display:flex;
+    flex-direction: column;
+    justify-content: center; 
+    align-items: center;
+    text-align: center;  
+    
+
+    backdrop-filter: blur(5px);     
+    border: 1px solid rgba(255, 255, 255, 0.35); 
+    border-radius: 16px;                  
+    box-shadow: 0 8px 20px rgba(96, 91, 245, 0.8); 
+}
+
+#record-container {
+    width: 300px;
+    height: 200px;
+    display:flex;
+    flex-direction: column;
+    justify-content: center; 
+    align-items: center;
+    text-align: center;  
+ 
+    backdrop-filter: blur(5px);     
+    border: 1px solid rgba(255, 255, 255, 0.35); 
+    border-radius: 16px;                  
+    box-shadow: 0 8px 20px rgba(96, 91, 245, 0.8); 
+  
+}
+
+h1 {
+    font-size: 3rem;
+    background: linear-gradient(90deg, #6a11cb, #2575fc);
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    transition: text-shadow 0.3s ease, color 0.3s ease;
+    margin-bottom: 30px;          
+}
+
+h2 {
+    margin: 0;
 }
 
 #piano {
@@ -33,13 +95,19 @@ header {
   margin-top: 20px;
 }
 
+#piano-container {
+    align-items: center;   
+    margin: 0;
+
+}
+
 .key.white {
   width: 65px;
   height: 220px;
   background: #ffffff;
   border: 0.5px solid #d0d0d0;
   border-radius: 0 0 10px 10px;
-  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 8px 2px rgba(0, 0, 0, 0.2);
   margin: 0;
   display: flex;
   justify-content: center;
@@ -52,6 +120,12 @@ header {
 
 .key.white:active {
   background: #eaeaea;
+}
+
+.key.highlighted {
+    background-color: yellow;          /* or any highlight */
+    box-shadow: 0 0 10px rgba(255,255,0,0.8);
+    transition: 0.2s;
 }
 
 .key.black {
@@ -85,16 +159,17 @@ header {
 }
 
 #connect {
-  padding: 14px 26px;
-  border-radius: 12px;
-  border: none;
-  font-size: 1rem;
-  background: #5b65f7;
-  color: white;
-  cursor: pointer;
-  font-weight: 600;
-  transition: 0.25s ease;
-  box-shadow: 15px 10px 10px rgba(0, 0, 0, 0.2);
+    padding: 14px 26px;
+    border-radius: 16px;
+    border: none;
+    font-size: 1rem;
+    background: #5b65f7;
+    color: white;
+    cursor: pointer;
+    font-weight: 600;
+    transition: 0.25s ease;
+    box-shadow: 15px 10px 10px rgba(0, 0, 0, 0.2);
+    margin-bottom: 10px;
 }
 
 #connect:active {
@@ -103,7 +178,8 @@ header {
 
 #drum {
   padding: 14px 26px;
-  border-radius: 12px;
+  border-radius: 16px;
+  width: 180px;
   border: none;
   font-size: 1rem;
   background: #5b65f7;
@@ -117,11 +193,61 @@ header {
   background: #a7acf6;
 }
 
+
+#record {
+  padding: 14px 26px;
+  width: 190px;
+  border-radius: 16px;
+  border: none;
+  font-size: 1rem;
+  background: #5b65f7;
+  color: white;
+  cursor: pointer;
+  font-weight: 600;
+  transition: 0.25s ease;
+  box-shadow: 15px 10px 10px rgba(0, 0, 0, 0.2);
+}
+
+#save {
+  padding: 10px;
+  width: 110px;
+  border-radius: 16px;
+  border: none;
+  font-size: 1rem;
+  background: #5b65f7;
+  color: white;
+  cursor: pointer;
+  font-weight: 600;
+  transition: 0.25s ease;
+  box-shadow: 15px 10px 10px rgba(0, 0, 0, 0.2);
+}
+
+#discard {
+  padding: 10px;
+  width: 110px;
+  border-radius: 16px;
+  border: none;
+  font-size: 1rem;
+  background: #5b65f7;
+  color: white;
+  cursor: pointer;
+  font-weight: 600;
+  transition: 0.25s ease;
+  box-shadow: 15px 10px 10px rgba(0, 0, 0, 0.2);
+}
+
+#record:active {
+  background: #a7acf6;
+}
+
+
 /* music score */
 #score-container {
-  text-align: center;
-  margin-top: 40px;
+    text-align: center;
+    margin-top: 40px;
+    
 }
+
 
 .staff-line {
   width: 100%;
@@ -131,10 +257,18 @@ header {
 }
 
 .note-head {
-  position: absolute;
-  font-size: 20px;
-  opacity: 1;
-  transition: opacity 0.2s ease;
+
+    background-image: url('piano_note.png');
+    position: absolute;
+    width: 30px;
+    height: 30px;
+
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    opacity: 1;
+    transition: opacity 0.2s ease;
+
 }
 
 
@@ -145,6 +279,24 @@ header {
   height: 90px;
   z-index: 2;
 }
+
+
+#log {
+    width: 70%;               
+    height: 100px;     
+    overflow-y: auto;         
+    backdrop-filter: blur(5px);     
+    border: 1px solid rgba(255, 255, 255, 0.35); 
+    border-radius: 16px;                  
+    box-shadow: 0 8px 20px rgba(96, 91, 245, 0.8); 
+    padding: 10px;
+    text-align: left;
+    font-family: monospace;
+    font-size: 0.9rem;
+    flex-shrink: 0;  
+    text-align: center;
+    
+  }
 
 #score {
   position: relative;
@@ -170,5 +322,14 @@ header {
   top: 0;
   height: 100%;
   width: 750px;
-  overflow: hidden;
+  overflow: hidden
+
+}
+
+.hidden {
+  display: none;
+}
+
+#post-recording button:not(:last-child) {
+  margin-right: 10px;
 }
