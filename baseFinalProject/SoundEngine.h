@@ -21,7 +21,7 @@ typedef struct {
   unsigned long vibratoLevel;
   bool          gestureModeOn;
   unsigned long savedClock;
-  fsm_state     state;
+  fsm_state state;
   bool harmonies[3];
 } full_state;
 
@@ -35,8 +35,9 @@ void startPlayback();
 void stopPlayback();
 
 void servicePlaybackTick();
-
-bool isRecording();
+void updateHarmonyControls();
+void harmonyInit();
+bool isRecording();         
 bool isPlayingBack();
 void recordSample(int freq);
 

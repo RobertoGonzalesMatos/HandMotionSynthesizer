@@ -1,6 +1,8 @@
 #include "SoundEngine.h"
 #include <Wire.h>
 #include <math.h>
+#include "notes.h"
+
 
 // ===== GLOBAL FSM INSTANCE =====
 // Start with 0 so first valid targetFreqHz will trigger a play.
@@ -230,7 +232,7 @@ static inline int quantizeWithHys(float semi_cont) {
 // xRead = targetFreqHz, yRead = vibrato Hz, zRead = yaw_deg
 full_state updateFSM(full_state currState,
                      float xRead, float yRead, float zRead,
-                     bool drumMode, unsigned long clock) {
+                     bool buttonOn, unsigned long clock) {
   full_state ret = currState;
   bool fiveMs = (clock - currState.savedClock) >= 5;
 
@@ -432,6 +434,11 @@ void pollIMUAndUpdatePitch() {
   if (vibLevel != lastVibLevel) lastVibLevel = vibLevel;
   float desiredVibRate = vibRates[lastVibLevel < 0 ? 0 : lastVibLevel];
 
+  // 8) ==== FSM CALL (drives play/stop/vibrato per your table) ====
+  const bool button = readButton();
+
+  // xRead = freq, yRead = vibRate, zRead = yaw
+  
   // 8) FSM call (drives play/stop/vibrato)
   FS = updateFSM(FS, (float)targetFreqHz, desiredVibRate, yaw_deg, drumMode, now);
   if (isRecording()) {
@@ -455,14 +462,14 @@ void pollIMUAndUpdatePitch() {
   }
 }
 
-static const char* NOTE12[12] =
-  {"C","C#","D","D#","E","F","F#","G","G#","A","A#","B"};
+// static const char* NOTE12[12] =
+//   {"C","C#","D","D#","E","F","F#","G","G#","A","A#","B"};
 
-static inline int hzToMidi(int hz) {
-  if (hz <= 0) return 0;
-  float n = 69.0f + 12.0f * (log((float)hz / 440.0f) / log(2.0f)); // A4=440 -> 69
-  return (int)lroundf(n);
-}
+// static inline int hzToMidi(int hz) {
+//   if (hz <= 0) return 0;
+//   float n = 69.0f + 12.0f * (log((float)hz / 440.0f) / log(2.0f)); // A4=440 -> 69
+//   return (int)lroundf(n);
+// }
 
 static inline void printHzAndNote(int hz) {
   int midi = hzToMidi(hz);

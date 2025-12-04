@@ -155,6 +155,10 @@ void initGPT() {
  *             LIVE NOTE (GPT2)
  *********************************************************/
 void playNote(int freq) {
+  R_GPT2->GTCR_b.CST = 0;
+  if (FS.harmonies[0]) R_GPT4->GTCR_b.CST = 0;
+  if (FS.harmonies[1]) R_GPT5->GTCR_b.CST = 0;
+  if (FS.harmonies[2]) R_GPT6->GTCR_b.CST = 0;
     curFreq = freq;
 
     if (freq <= 0) {
@@ -163,6 +167,36 @@ void playNote(int freq) {
         return;
     }
 
+  int harmony = freq * pow(2, 4.0/12.0);
+  int harmony2 = freq * pow(2, 7.0/12.0);
+  int harmony3 = freq * 2;
+
+#ifdef SINUSOID
+  R_GPT2->GTPR = CLOCKFREQ / (16.0 * freq);
+  if (FS.harmonies[0]) R_GPT4->GTPR = CLOCKFREQ / (16.0 * harmony);
+  if (FS.harmonies[1]) R_GPT5->GTPR = CLOCKFREQ / (16.0 * harmony2);
+  if (FS.harmonies[2]) R_GPT6->GTPR = CLOCKFREQ / (16.0 * harmony3);
+#else
+  R_GPT2->GTPR = CLOCKFREQ / (2.0 * freq);
+  if (FS.harmonies[0]) R_GPT4->GTPR = CLOCKFREQ / (2.0 * harmony);
+  if (FS.harmonies[1]) R_GPT5->GTPR = CLOCKFREQ / (2.0 * harmony2);
+  if (FS.harmonies[2]) R_GPT6->GTPR = CLOCKFREQ / (2.0 * harmony3);
+#endif
+
+  R_ICU->IELSR[TIMER_INT] = (0x06d << R_ICU_IELSR_IELS_Pos);
+  R_GPT2->GTCR_b.CST = 1;
+  if (FS.harmonies[0]) {
+    R_ICU->IELSR[HARMONY_INT] = (0x07d << R_ICU_IELSR_IELS_Pos);
+    R_GPT4->GTCR_b.CST = 1;
+  }
+  if (FS.harmonies[1]) {
+    R_ICU->IELSR[HARMONY_INT2] = (0x085 << R_ICU_IELSR_IELS_Pos);
+    R_GPT5->GTCR_b.CST = 1;
+  }
+  if (FS.harmonies[2]) {
+    R_ICU->IELSR[HARMONY_INT3] = (0x08d << R_ICU_IELSR_IELS_Pos);
+    R_GPT6->GTCR_b.CST = 1;
+  }
     liveActive = true;
     R_GPT2->GTCR_b.CST = 0;
     R_GPT2->GTPR = CLOCKFREQ / (2 * freq);

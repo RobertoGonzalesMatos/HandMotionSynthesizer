@@ -1,5 +1,9 @@
 #include "SoundEngine.h"
 #include <CapacitiveSensor.h>
+#include "notes.h"
+
+extern const char* NOTE12[12];
+extern int hzToMidi(int hz);
 
 const int CTIME = 8;
 int thresholds[3];
@@ -95,6 +99,8 @@ void updateHaromnyControls() {
   prevHarmonies[0] = FS.harmonies[0];
   prevHarmonies[1] = FS.harmonies[1];
   prevHarmonies[2] = FS.harmonies[2];
+
+  printActiveHarmonies();
 }
 
 void harmonyInit() {
@@ -106,3 +112,23 @@ void harmonyInit() {
   thresholds[2] = 500;
   // testCalibration();
 }
+
+void printActiveHarmonies() {
+    int midi1 = hzToMidi(FS.noteFrequency * pow(2, 4.0/12.0));
+    int midi2 = hzToMidi(FS.noteFrequency * pow(2, 7.0/12.0));
+    int midi3 = hzToMidi(FS.noteFrequency * 2);
+
+    if (FS.harmonies[0]) {
+        Serial.print("1_HARM:");
+        Serial.println(NOTE12[midi1 % 12]);
+    }
+    if (FS.harmonies[1]) {
+        Serial.print("2_HARM:");
+        Serial.println(NOTE12[midi2 % 12]);
+    }
+    if (FS.harmonies[2]) {
+        Serial.print("3_HARM:");
+        Serial.println(NOTE12[midi3 % 12]);
+    }
+}
+

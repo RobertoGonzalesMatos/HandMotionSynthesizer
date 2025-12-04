@@ -61,29 +61,28 @@ void loop() {
       continue;
     }
 
-    if (c == ' ') {    // Hard mute
-      stopPlay();
-      curFreq  = 0;
-      baseFreq = 0;
+      if (c == ' ') {        // mute / reset
+        stopPlay();
+        curFreq  = 0;
+        baseFreq = 0;
+        continue;
+      }
+      if (c == 'v') {        // force vibrato on (rate example)
+        setVibrato(6.0f);
+        continue;
+      }
+      if (c == 'V') {        // vibrato off
+        stopVibrato();
+        continue;
+      }
+    if (c == 'd') {        // Drum Mode on
+      drumMode = !drumMode;
       continue;
     }
 
-    if (c == 'v') {    // Vibrato ON
-      setVibrato(6.0f);
-      continue;
-    }
-
-    if (c == 'V') {    // Vibrato OFF
-      stopVibrato();
-      continue;
-    }
-
-    if (c == 'd') {    // Drum Mode ON
-      drumMode = true;
-  // Confirmation chirp
-      continue;
-    }
   }
+  // Update harmony controls + associated variables
+  updateHaromnyControls();
 
   // ============================
   //       PLAYBACK ENGINE

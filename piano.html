@@ -189,19 +189,56 @@ async function readFromArduino() {
 //handle messages from Arduino
 function handleArduinoMessage(msg) {
   msg.split("\n").forEach(line => {
-          line = line.trim();
-          if (line.startsWith("NOTE:")) { 
-                  const note = line.slice(5); // remove NOTE:
-                  if (note === "0") { //no note/silence
-                          document.getElementById("current-note").textContent = "-";
-                          return;
-                  } else {
-                          updateScore(note); //add note to score
-                  }
-          } 
-          handleRecordingLine(line);
+    line = line.trim();
+
+    //main note
+    if (line.startsWith("NOTE:")) {
+      const note = line.slice(5);
+      if (note === "0") {
+          document.getElementById("current-note").textContent = "-";
+          return;
+      } else {
+          updateScore(note);  // main note (moves x forward)
+      }
+    }
+
+    // harmony lines
+    if (line.startsWith("1_HARM:")) {
+        const harm = line.slice(7);
+        addHarmonyToScore(harm);
+    }
+    if (line.startsWith("2_HARM:")) {
+        const harm = line.slice(7);
+        addHarmonyToScore(harm);
+    }
+    if (line.startsWith("3_HARM:")) {
+        const harm = line.slice(7);
+        addHarmonyToScore(harm);
+    }
+
+    handleRecordingLine(line);
+
   });
 }
+
+//add harmony note to score
+function addHarmonyToScore(note) {
+    const notesLayer = document.getElementById("notes-layer");
+    const y = notePositions[note];
+
+    //use the previous note's x position
+    const x = nextX - 40;  
+
+    const div = document.createElement("div");
+    div.className = "note-head harmony-note";
+    div.style.top = y + "px";
+    div.style.left = x + "px";
+
+    console.log("Adding harmony note:", note, "at", x, y);
+
+    notesLayer.appendChild(div);
+}
+
 
 //handle lines related to recording
 function handleRecordingLine(line) {
