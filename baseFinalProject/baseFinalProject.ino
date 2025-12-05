@@ -82,13 +82,13 @@ void loop() {
 
   }
   // Update harmony controls + associated variables
-  updateHaromnyControls();
+  // updateHaromnyControls();
 
   // ============================
   //       PLAYBACK ENGINE
   //   (always runs in parallel)
   // ============================
-  servicePlaybackTick();
+  // servicePlaybackTick();
 
   // ============================
   //        LIVE IMU ENGINE
@@ -96,3 +96,5 @@ void loop() {
   // ============================
   pollIMUAndUpdatePitch();
 }
+
+

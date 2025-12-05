@@ -225,29 +225,21 @@ void gptISR() {
  *             PLAYBACK (GPT7)
  *********************************************************/
 void playbackSetFreq(int freq) {
-    Serial.print("[playbackSetFreq] freq = ");
-    Serial.println(freq);
-
     if (freq <= 0) {
-        Serial.println("[playbackSetFreq] freq <= 0 -> stopping");
         playbackActive = false;
-        R_GPT7->GTCR_b.CST = 0;
-        R_PFS->PORT[OUT_PORT_PLAYBACK]
-            .PIN[OUT_PIN_PLAYBACK].PmnPFS_b.PODR = 0;
+        R_GPT7->GTCR_b.CST = 0;    // stop waveform output
         return;
     }
 
     playbackActive = true;
 
-
     uint32_t pr = CLOCKFREQ / (2 * freq);
-    Serial.print("[playbackSetFreq] GTPR = ");
-    Serial.println(pr);
 
     R_GPT7->GTCR_b.CST = 0;
     R_GPT7->GTPR = pr;
     R_GPT7->GTCR_b.CST = 1;
 }
+
 
 void playbackISR() {
     if (playbackActive) {
@@ -366,7 +358,6 @@ int lastRecFreq = -1;
 
 bool playbackRunning = false;
 int playIndex = 0;
-unsigned long playEventStartMs = 0;
 int playbackLastFreq = -1;
 
 void startRecording() {
@@ -404,34 +395,107 @@ void recordSample(int f) {
         lastChangeMs = now;
     }
 }
-
 void startPlayback() {
-    Serial.println("[startPlayback] BEGIN");
-
+        debugPrintRecording();
     playbackRunning = true;
     playIndex = 0;
-    playEventStartMs = millis();
     playbackLastFreq = -1;
+    recActive = false;
+    // Disable harmony3 (GPT6) if active
+    FS.harmonies[2] = false;
+    R_GPT6->GTCR_b.CST = 0;
 
-    Serial.print("[startPlayback] recCount = ");
-    Serial.println(recCount);
+    /*************************************************
+     *  CONFIGURE GPT6 EXACTLY LIKE GPT3 IN WORKING CODE
+     *************************************************/
+    R_GPT6->GTCR_b.CST = 0;
 
-    if (recCount == 0) {
-        Serial.println("[startPlayback] ERROR: recCount=0");
-    }
+    // Only start/stop by software (same as GPT3)
+    R_GPT6->GTSSR = (1 << R_GPT0_GTSSR_CSTRT_Pos);
+    R_GPT6->GTPSR = (1 << R_GPT0_GTPSR_CSTOP_Pos);
+
+    // SAME PRESCALER AS WORKING SYSTEM (GPT3 used 0b101)
+    R_GPT6->GTCR = (0b101 << 24);
+
+    // Map GPT6 interrupt to the NOTE_INT3 vector
+    R_ICU->IELSR[HARMONY_INT3] = (0x08d << R_ICU_IELSR_IELS_Pos);
+
+    // Install ISR
+    NVIC_SetVector((IRQn_Type)HARMONY_INT3, (uint32_t)&gptPlaybackDurationISR);
+    NVIC_SetPriority((IRQn_Type)HARMONY_INT3, 14);
+    NVIC_EnableIRQ((IRQn_Type)HARMONY_INT3);
+
+    // Reset compare value (just like GPT3 version)
+    R_GPT6->GTPR = 0;
+
+    // START TIMER
+    R_GPT6->GTCR_b.CST = 1;
+
+    // Start first playback frequency
+    NoteEvent &ev = recBuf[0];
+    playbackLastFreq = -1;
+    playbackSetFreq(ev.freq);
+    gpt6StartDuration(ev.duration);
 }
+
+
+void gpt6StartDuration(unsigned long ms) {
+    // match GPT3 logic: 46875 ticks per ms at this prescaler
+        uint32_t ticks = (uint32_t)((46875.0 * ms) / 1000.0);
+
+    if (ticks == 0) {
+        ticks = 1;  // avoid 0 -> no interrupt
+    }
+
+    R_GPT6->GTCR_b.CST = 0;
+    R_GPT6->GTPR = ticks;
+    R_GPT6->GTCNT = 0;
+    R_GPT6->GTCR_b.CST = 1;
+}
+void gptPlaybackDurationISR() {
+    // STOP timer (same as GPT3 ISR)
+    R_GPT6->GTCR_b.CST = 0;
+
+    // CLEAR interrupt
+    R_ICU->IELSR_b[HARMONY_INT3].IR = 0;
+
+    playIndex++;
+
+    if (playIndex >= recCount) {
+        stopPlayback();
+        return;
+    }
+
+    NoteEvent &ev = recBuf[playIndex];
+    playbackLastFreq = -1;
+    playbackSetFreq(ev.freq);
+
+    gpt6StartDuration(ev.duration);
+
+    // RESTART timer
+    R_GPT6->GTCR_b.CST = 1;
+}
+
+
 
 void stopPlayback() {
-    Serial.println("[stopPlayback] STOPPED");
-
     playbackRunning = false;
     playbackActive = false;
+
     R_GPT7->GTCR_b.CST = 0;
+    // R_GPT6->GTCR_b.CST = 0;
+
+    // Restore Harmony3 ISR
+    // NVIC_SetVector((IRQn_Type)HARMONY_INT3, (uint32_t)&gptISRHarmony3);
+    // NVIC_EnableIRQ((IRQn_Type)HARMONY_INT3);
+
+    // FS.harmonies[2] = true;
 
     R_PFS->PORT[OUT_PORT_PLAYBACK]
-        .PIN[OUT_PIN_PLAYBACK]
-        .PmnPFS_b.PODR = 0;
+        .PIN[OUT_PIN_PLAYBACK].PmnPFS_b.PODR = 0;
 }
+
+
 
 bool isPlayingBack() {
     return playbackRunning;
@@ -440,45 +504,21 @@ bool isPlayingBack() {
 bool isRecording() {
     return recActive;
 }
+void debugPrintRecording() {
+    Serial.println(F("===== RECORDED NOTE BUFFER ====="));
+    Serial.print(F("Total events: "));
+    Serial.println(recCount);
+    Serial.println(F("--------------------------------"));
 
-
-void servicePlaybackTick() {
-    if (!playbackRunning) return;
-
-    unsigned long now = millis();
-
-    if (playIndex >= recCount) {
-        Serial.println("[servicePlaybackTick] DONE — reached end");
-        stopPlayback();
-        return;
+    for (int i = 0; i < recCount; i++) {
+        Serial.print(i);
+        Serial.print(F(": freq="));
+        Serial.print(recBuf[i].freq);
+        Serial.print(F(", dur="));
+        Serial.print(recBuf[i].duration);
+        Serial.println(F(" ms"));
     }
 
-    NoteEvent &ev = recBuf[playIndex];
-
-    // print event info when loading a new one
-    if (ev.freq != playbackLastFreq) {
-        Serial.print("[servicePlaybackTick] NEW EVENT: index=");
-        Serial.print(playIndex);
-        Serial.print(" freq=");
-        Serial.print(ev.freq);
-        Serial.print(" dur=");
-        Serial.println(ev.duration);
-
-        playbackLastFreq = ev.freq;
-        playbackSetFreq(ev.freq);
-    }
-
-    if (now - playEventStartMs >= ev.duration) {
-        Serial.print("[servicePlaybackTick] advancing index from ");
-        Serial.print(playIndex);
-        Serial.print(" to ");
-        Serial.println(playIndex + 1);
-
-        playIndex++;
-        playEventStartMs = now;
-        playbackLastFreq = -1;
-    }
+    Serial.println(F("===== END OF RECORDING =====\n"));
 }
-
-
 #endif // SOUND_ENGINE_H
