@@ -82,7 +82,7 @@ void loop() {
 
   }
   // Update harmony controls + associated variables
-  // updateHaromnyControls();
+  updateHaromnyControls();
 
   // ============================
   //       PLAYBACK ENGINE

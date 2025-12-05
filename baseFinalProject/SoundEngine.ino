@@ -13,7 +13,7 @@ const int CLOCKFREQ      = 3000000;
 const unsigned int TIMER_INT     = 15;    // GPT2 live note
 const unsigned int PLAYBACK_INT  = 31;    // GPT7 playback
 const unsigned int HARMONY_INT   = 27;
-const unsigned int HARMONY_INT2  = 32;
+const unsigned int HARMONY_INT2  = 26;
 const unsigned int HARMONY_INT3  = 28;
 const unsigned int NOTE_INT      = 29;
 
@@ -21,7 +21,7 @@ const unsigned int NOTE_INT      = 29;
 const int OUT_PORT = 1;
 const int OUT_PIN  = 6;
 const int OUT_PIN1 = 5;
-const int OUT_PIN2 = 2;
+const int OUT_PIN2 = 7;
 const int OUT_PIN3 = 11;
 
 // Playback pin (unchanged as requested)
@@ -132,6 +132,10 @@ void initGPT() {
     R_PFS->PORT[OUT_PORT].PIN[OUT_PIN1].PmnPFS_b.PDR = 1;
     R_PFS->PORT[OUT_PORT].PIN[OUT_PIN2].PmnPFS_b.PDR = 1;
     R_PFS->PORT[OUT_PORT].PIN[OUT_PIN3].PmnPFS_b.PDR = 1;
+
+    R_ICU->IELSR[HARMONY_INT] = 0;
+    R_ICU->IELSR[HARMONY_INT2] = 0;
+    R_ICU->IELSR[HARMONY_INT3] = 0;
 
     // Harmony interrupts
     NVIC_SetVector((IRQn_Type)HARMONY_INT, (uint32_t)&gptISRHarmony);
