@@ -61,16 +61,19 @@
         </section>
 
         <section id="right-container">
-                <section id="record-container">
-                        <h2>Record</h2>
-                        <p>Select to record and save your synthesizer sounds.</p>
-                        <button id="record">Record 🎤︎︎</button>
-                        <div id="post-recording" class="hidden">
-                                <button id="save">Save ☑</button> 
-                                <button id="discard">Discard ×</button>
-                        </div>
-                </section>
+          <section id="record-container">
+            <h2>Record</h2>
+            <p>Select to record, replay, and save your synthesizer sounds.</p>
+            <button id="record">Record 🎤︎︎</button>
+              <div id="post-recording" class="hidden">
+                <button id="replay">Replay ⤺</button>
+                <div class="button-row">
+                    <button id="save">Save ☑</button> 
+                    <button id="discard">Discard ×</button>
+                </div>
                 
+              </div>
+          </section>
         </section>
 
 
@@ -161,6 +164,23 @@ async function sendNote(note) {
 
   updateScore(note); //update score display
 }
+
+//repay button handler
+document.getElementById("replay").onclick = async () => {
+    // if (!writer) {
+    //     appendLog("Please connect first.\n");
+    //     return;
+    // }
+
+    try {
+        await writer.write(new TextEncoder().encode("r")); //send lowercase 'r' to Arduino so that replay is triggered
+        appendLog("Replaying recording...");
+    } catch (err) {
+        console.error(err);
+        appendLog("Failed to replay.");
+    }
+};
+
 
 
 let reader;
