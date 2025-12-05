@@ -361,12 +361,12 @@ full_state updateFSM(full_state currState,
       }
       // 4-5 (a..f): gesture hits; placeholders for now
       if (fiveMs && !drumMode) {
-        if (xRead < -25.0f) { Serial.println(F("Kick!"));   ret.state = s_GESTURE_CALC; ret.savedClock = clock; break; }
-        if (xRead >  25.0f) { Serial.println(F("Snare!"));  ret.state = s_GESTURE_CALC; ret.savedClock = clock; break; }
-        if (yRead >  25.0f) { Serial.println(F("Tom!"));    ret.state = s_GESTURE_CALC; ret.savedClock = clock; break; }
-        if (yRead < -25.0f) { Serial.println(F("Hat!"));    ret.state = s_GESTURE_CALC; ret.savedClock = clock; break; }
-        if (zRead >  25.0f) { Serial.println(F("Ride!"));   ret.state = s_GESTURE_CALC; ret.savedClock = clock; break; }
-        if (zRead < -25.0f) { Serial.println(F("Cymbal!")); ret.state = s_GESTURE_CALC; ret.savedClock = clock; break; }
+        if (xRead < -25.0f) { Kick();   ret.state = s_GESTURE_CALC; ret.savedClock = clock; break; }
+        if (xRead >  25.0f) { Snare();  ret.state = s_GESTURE_CALC; ret.savedClock = clock; break; }
+        if (yRead >  25.0f) { Tom();    ret.state = s_GESTURE_CALC; ret.savedClock = clock; break; }
+        if (yRead < -25.0f) { Hat();    ret.state = s_GESTURE_CALC; ret.savedClock = clock; break; }
+        if (zRead >  25.0f) { Ride();   ret.state = s_GESTURE_CALC; ret.savedClock = clock; break; }
+        if (zRead < -25.0f) { Cymbal(); ret.state = s_GESTURE_CALC; ret.savedClock = clock; break; }
       }
       break;
 

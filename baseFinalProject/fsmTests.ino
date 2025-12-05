@@ -11,7 +11,8 @@ typedef struct {
 
 bool testTransition(full_state start,
                     full_state end,
-                    state_inputs inputs);
+                    state_inputs inputs,
+                    char* lastFunc);
 
 char* s2str(fsm_state s) {
   switch(s) {
@@ -32,7 +33,8 @@ char* s2str(fsm_state s) {
 
 bool testTransition(full_state start,
                     full_state end,
-                    state_inputs inputs) {
+                    state_inputs inputs,
+                    char* lastFunc) {
 
   full_state res = updateFSM(start, inputs.xRead, inputs.yRead, inputs.zRead, inputs.buttonOn, inputs.clock);
 
@@ -60,6 +62,7 @@ bool testTransition(full_state start,
       if (start.vibratoLevel==res.vibratoLevel) passedTest = false;
     }
   }
+  // if (lastFunc!=mockFunc) passedTest = false;
 
   if (passedTest) {
     char sToPrint[200];
@@ -82,6 +85,8 @@ bool testTransition(full_state start,
     Serial.println(sToPrint);
     sprintf(sToPrint, "actual:   %6ld | %6ld | %4ld | %10ld", res.noteFrequency, res.vibratoLevel, res.gestureModeOn, res.savedClock);
     Serial.println(sToPrint);
+    sprintf(sToPrint, "mock func expected: %s, received: %s", lastFunc, mockFunc);
+    Serial.println(sToPrint);
     Serial.println("");
     return false;
   }
@@ -91,7 +96,7 @@ const int numTests = 16;
 const full_state testStatesIn[numTests] =  {{0, 0, 0, 0, s_INIT, {}}, {0, 0, 0, 0, s_INIT}, {500, 0, 0, 100, s_REG_CALC}, {500, 0, 0, 0, s_REG_WAIT}, {0, 0, 0, 0, s_REG_WAIT}, {0, 0, 0, 0, s_REG_WAIT}, {600, 0, 0, 0, s_REG_WAIT}, {0, 0, 0, 0, s_REG_WAIT}, {0, 0, 0, 0, s_GESTURE_CALC}, {0, 0, 0, 100, s_GESTURE_CALC}, {0, 0, 0, 0, s_GESTURE_WAIT}, {0, 0, 0, 0, s_GESTURE_WAIT}, {0, 0, 0, 0, s_GESTURE_WAIT}, {0, 0, 0, 0, s_GESTURE_WAIT}, {0, 0, 0, 0, s_GESTURE_WAIT}, {0, 0, 0, 0, s_GESTURE_WAIT}};
 const full_state testStatesOut[numTests] = {{0, 0, 0, 0, s_INIT, {}}, {100, 0, 0, 0, s_REG_CALC}, {500, 0, 0, 105, s_REG_WAIT}, {650, 0, 0, 0, s_REG_CALC}, {0, 200, 0, 0, s_REG_CALC}, {0, 0, 0, 0, s_REG_CALC}, {600, 0, 0, 0, s_REG_CALC}, {0, 0, 0, 0, s_GESTURE_CALC}, {0, 0, 0, 0, s_REG_WAIT}, {0, 0, 0, 105, s_GESTURE_WAIT}, {0, 0, 0, 0, s_GESTURE_CALC}, {0, 0, 0, 0, s_GESTURE_CALC}, {0, 0, 0, 0, s_GESTURE_CALC}, {0, 0, 0, 0, s_GESTURE_CALC}, {0, 0, 0, 0, s_GESTURE_CALC}, {0, 0, 0, 0, s_GESTURE_CALC}};
 const state_inputs testInputs[numTests] = {{0, 0, 0, 0, 0}, {100, 0, 0, 0, 0}, {0, 0, 0, 0, 105}, {0, 30, 0, 0, 0}, {30, 0, 0, 0, 0}, {0, 0, 30, 0, 0}, {0, 0, 20, 0, 0}, {0, 0, 0, 1, 0}, {0, 0, 0, 1, 0}, {0, 0, 0, 0, 105}, {100, 0, 0, 0, 0}, {-100, 0, 0, 0, 0}, {0, 100, 0, 0, 0}, {0, -100, 0, 0, 0}, {0, 0, 100, 0, 0}, {0, 0, -100, 0, 0}};
-const char* testLastFunc[numTests] = {"", "", "", "", "", "doStop()", "", "", "", "", "Snare()", "Kick()", "Tom()", "Hat()", "Ride()", "Cymbal"};
+char* testLastFunc[numTests] = {"", "", "", "", "", "doStop()", "", "", "", "", "Snare()", "Kick()", "Tom()", "Hat()", "Ride()", "Cymbal"};
 
 bool testAll() {
   for (int i = 0; i < numTests; i++) {
@@ -99,8 +104,8 @@ bool testAll() {
     Serial.print(i + 1);
     Serial.print(" of ");
     Serial.println(numTests);
-    // reset();
-    if (!testTransition(testStatesIn[i], testStatesOut[i], testInputs[i])) {
+    mockFunc = "";
+    if (!testTransition(testStatesIn[i], testStatesOut[i], testInputs[i], testLastFunc[i])) {
       return false;
     }
     Serial.println();

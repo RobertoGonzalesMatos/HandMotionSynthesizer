@@ -1,5 +1,6 @@
 #ifndef SOUNDENGINE_H
 #define SOUNDENGINE_H
+#define TESTING
 
 typedef enum {
   s_INIT = 0,
@@ -27,6 +28,8 @@ void updateHarmonyControls();
 void harmonyInit();
 bool isRecording();         
 bool isPlayingBack();
+
+char* mockFunc;
 
 #endif
 
