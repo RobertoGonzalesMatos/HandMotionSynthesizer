@@ -1,6 +1,6 @@
 #include <math.h>
 #include "SoundEngine.h"
-
+#include "DrumLibrary.h"
 // ===== External globals from SoundEngine =====
 extern int   curFreq;
 extern int   baseFreq;
@@ -95,6 +95,7 @@ void loop() {
   // (always runs, even during playback)
   // ============================
   pollIMUAndUpdatePitch();
+  pollDrum(millis());
 }
 
 
