@@ -12,6 +12,7 @@ const int CLOCKFREQ      = 3000000;
 // GPT interrupt vectors
 const unsigned int TIMER_INT     = 15;    // GPT2 live note
 const unsigned int PLAYBACK_INT  = 31;    // GPT7 playback
+const unsigned int PLAYBACK_INT2 = 25;    // GPT6 playback
 const unsigned int HARMONY_INT   = 27;
 const unsigned int HARMONY_INT2  = 26;
 const unsigned int HARMONY_INT3  = 28;
@@ -24,9 +25,9 @@ const int OUT_PIN1 = 5;
 const int OUT_PIN2 = 7;
 const int OUT_PIN3 = 11;
 
-// Playback pin (unchanged as requested)
-const int OUT_PORT_PLAYBACK = 1;
-const int OUT_PIN_PLAYBACK  = 7;
+// Playback pin 
+const int OUT_PORT_PLAYBACK = 4;
+const int OUT_PIN_PLAYBACK  = 11;
 
 int   curFreq  = 0;
 bool  liveActive = false;
@@ -123,10 +124,10 @@ void initGPT() {
     R_GPT5->GTPSR = (1 << R_GPT0_GTPSR_CSTOP_Pos);
     R_GPT5->GTCR  = 0b010 << 24;
 
-    R_GPT6->GTCR_b.CST = 0;
-    R_GPT6->GTSSR = (1 << R_GPT0_GTSSR_CSTRT_Pos);
-    R_GPT6->GTPSR = (1 << R_GPT0_GTPSR_CSTOP_Pos);
-    R_GPT6->GTCR  = 0b010 << 24;
+    R_GPT1->GTCR_b.CST = 0;
+    R_GPT1->GTSSR = (1 << R_GPT0_GTSSR_CSTRT_Pos);
+    R_GPT1->GTPSR = (1 << R_GPT0_GTPSR_CSTOP_Pos);
+    R_GPT1->GTCR  = 0b010 << 24;
 
     // Harmony pins
     R_PFS->PORT[OUT_PORT].PIN[OUT_PIN1].PmnPFS_b.PDR = 1;
@@ -162,7 +163,7 @@ void playNote(int freq) {
   R_GPT2->GTCR_b.CST = 0;
   if (FS.harmonies[0]) R_GPT4->GTCR_b.CST = 0;
   if (FS.harmonies[1]) R_GPT5->GTCR_b.CST = 0;
-  if (FS.harmonies[2]) R_GPT6->GTCR_b.CST = 0;
+  if (FS.harmonies[2]) R_GPT1->GTCR_b.CST = 0;
     curFreq = freq;
 
     if (freq <= 0) {
@@ -179,32 +180,32 @@ void playNote(int freq) {
   R_GPT2->GTPR = CLOCKFREQ / (16.0 * freq);
   if (FS.harmonies[0]) R_GPT4->GTPR = CLOCKFREQ / (16.0 * harmony);
   if (FS.harmonies[1]) R_GPT5->GTPR = CLOCKFREQ / (16.0 * harmony2);
-  if (FS.harmonies[2]) R_GPT6->GTPR = CLOCKFREQ / (16.0 * harmony3);
+  if (FS.harmonies[2]) R_GPT1->GTPR = CLOCKFREQ / (16.0 * harmony3);
 #else
   R_GPT2->GTPR = CLOCKFREQ / (2.0 * freq);
   if (FS.harmonies[0]) R_GPT4->GTPR = CLOCKFREQ / (2.0 * harmony);
   if (FS.harmonies[1]) R_GPT5->GTPR = CLOCKFREQ / (2.0 * harmony2);
-  if (FS.harmonies[2]) R_GPT6->GTPR = CLOCKFREQ / (2.0 * harmony3);
+  if (FS.harmonies[2]) R_GPT1->GTPR = CLOCKFREQ / (2.0 * harmony3);
 #endif
 
   R_ICU->IELSR[TIMER_INT] = (0x06d << R_ICU_IELSR_IELS_Pos);
   R_GPT2->GTCR_b.CST = 1;
   if (FS.harmonies[0]) {
     R_ICU->IELSR[HARMONY_INT] = (0x07d << R_ICU_IELSR_IELS_Pos);
+    R_GPT4->GTCNT = 0;
     R_GPT4->GTCR_b.CST = 1;
   }
   if (FS.harmonies[1]) {
     R_ICU->IELSR[HARMONY_INT2] = (0x085 << R_ICU_IELSR_IELS_Pos);
+    R_GPT5->GTCNT = 0;
     R_GPT5->GTCR_b.CST = 1;
   }
   if (FS.harmonies[2]) {
-    R_ICU->IELSR[HARMONY_INT3] = (0x08d << R_ICU_IELSR_IELS_Pos);
-    R_GPT6->GTCR_b.CST = 1;
+    R_ICU->IELSR[HARMONY_INT3] = (0x065 << R_ICU_IELSR_IELS_Pos);
+    R_GPT1->GTCNT = 0;
+    R_GPT1->GTCR_b.CST = 1;
   }
     liveActive = true;
-    R_GPT2->GTCR_b.CST = 0;
-    R_GPT2->GTPR = CLOCKFREQ / (2 * freq);
-    R_GPT2->GTCR_b.CST = 1;
 }
 
 void stopPlay() {
@@ -405,9 +406,6 @@ void startPlayback() {
     playIndex = 0;
     playbackLastFreq = -1;
     recActive = false;
-    // Disable harmony3 (GPT6) if active
-    FS.harmonies[2] = false;
-    R_GPT6->GTCR_b.CST = 0;
 
     /*************************************************
      *  CONFIGURE GPT6 EXACTLY LIKE GPT3 IN WORKING CODE
@@ -422,12 +420,12 @@ void startPlayback() {
     R_GPT6->GTCR = (0b101 << 24);
 
     // Map GPT6 interrupt to the NOTE_INT3 vector
-    R_ICU->IELSR[HARMONY_INT3] = (0x08d << R_ICU_IELSR_IELS_Pos);
+    R_ICU->IELSR[PLAYBACK_INT2] = (0x08d << R_ICU_IELSR_IELS_Pos);
 
     // Install ISR
-    NVIC_SetVector((IRQn_Type)HARMONY_INT3, (uint32_t)&gptPlaybackDurationISR);
-    NVIC_SetPriority((IRQn_Type)HARMONY_INT3, 14);
-    NVIC_EnableIRQ((IRQn_Type)HARMONY_INT3);
+    NVIC_SetVector((IRQn_Type)PLAYBACK_INT2, (uint32_t)&gptPlaybackDurationISR);
+    NVIC_SetPriority((IRQn_Type)PLAYBACK_INT2, 14);
+    NVIC_EnableIRQ((IRQn_Type)PLAYBACK_INT2);
 
     // Reset compare value (just like GPT3 version)
     R_GPT6->GTPR = 0;
@@ -461,7 +459,7 @@ void gptPlaybackDurationISR() {
     R_GPT6->GTCR_b.CST = 0;
 
     // CLEAR interrupt
-    R_ICU->IELSR_b[HARMONY_INT3].IR = 0;
+    R_ICU->IELSR_b[PLAYBACK_INT2].IR = 0;
 
     playIndex++;
 

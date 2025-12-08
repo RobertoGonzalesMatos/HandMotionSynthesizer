@@ -447,7 +447,6 @@ full_state updateFSM(full_state currState,
 
         case s_GESTURE_WAIT:
         {
-          Serial.println("GESTURE_WAIT");
             #ifndef TESTING // actual rotation values
             float gx, gy, gz;
             computeGestureAxes(ax_g, ay_g, az_g, gx, gy, gz);

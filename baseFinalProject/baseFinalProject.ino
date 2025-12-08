@@ -29,8 +29,8 @@ void setup() {
   mpuInit();    // IMU
   harmonyInit();
 
-  testAll();
-  while(true);
+  // testAll();
+  // while(true);
 }
 
 // ===== Main Loop =====
