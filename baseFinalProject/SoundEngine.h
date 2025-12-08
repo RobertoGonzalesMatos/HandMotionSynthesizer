@@ -1,5 +1,6 @@
 #ifndef SOUNDENGINE_H
 #define SOUNDENGINE_H
+#define TESTING
 
 // Forward declaration so functions can accept Voice&
 // The actual struct is defined in SoundEngine.cpp / .ino
@@ -49,5 +50,7 @@ void harmonyInit();
 bool isRecording();         
 bool isPlayingBack();
 void recordSample(int freq);
+
+char* mockFunc;
 
 #endif

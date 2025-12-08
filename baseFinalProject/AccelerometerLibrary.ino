@@ -111,6 +111,7 @@ static inline void vibForceStop() {
   }
 }
 
+#ifndef TESTING // real stop function
 static inline void doStop() {
   if (notePlaying) {
     stopPlay();
@@ -118,6 +119,11 @@ static inline void doStop() {
   }
   vibForceStop();
 }
+#else // mock stop function
+static inline void doStop() {
+  mockFunc = "doStop()";
+}
+#endif
 
 
 // ===== Stubs you can wire to hardware =====
@@ -232,6 +238,7 @@ full_state updateFSM(full_state currState,
                      float gx_dps, float gy_dps, float gz_dps,
                      unsigned long clock)
 {
+  
     full_state ret = currState;
     bool fiveMs = (clock - currState.savedClock) >= 5;
 
@@ -316,6 +323,12 @@ full_state updateFSM(full_state currState,
     //                           FINITE STATE MACHINE
     // -------------------------------------------------------------------------
     //
+
+    #ifdef TESTING // set xRead, yRead, zRead from testing inputs
+    ret.noteFrequency = ax_g;
+    ret.vibratoLevel = ay_g;
+    ret.yaw_deg = az_g;
+    #endif
 
     switch (currState.state)
     {
@@ -434,8 +447,15 @@ full_state updateFSM(full_state currState,
 
         case s_GESTURE_WAIT:
         {
+          Serial.println("GESTURE_WAIT");
+            #ifndef TESTING // actual rotation values
             float gx, gy, gz;
             computeGestureAxes(ax_g, ay_g, az_g, gx, gy, gz);
+            #else // mock rotation values
+            float gx = ax_g;
+            float gy = ay_g;
+            float gz = az_g;
+            #endif
 
             // Back to regular mode
             if (!drumMode && currState.gestureModeOn)
@@ -448,7 +468,6 @@ full_state updateFSM(full_state currState,
 
             if (fiveMs && drumMode)
             {
-              Serial.print(gx);
               unsigned long now = clock;
                 if (gx < -25.0f) { Kick(now);   ret.state = s_GESTURE_CALC; ret.savedClock = clock; break; }
                 if (gx >  25.0f) { Snare(now);  ret.state = s_GESTURE_CALC; ret.savedClock = clock; break; }

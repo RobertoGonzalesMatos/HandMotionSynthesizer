@@ -28,6 +28,9 @@ void setup() {
   initGPT();    // timers + soft synth
   mpuInit();    // IMU
   harmonyInit();
+
+  testAll();
+  while(true);
 }
 
 // ===== Main Loop =====

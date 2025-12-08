@@ -1,5 +1,6 @@
 #include "DrumLibrary.h"
 #include <Arduino.h>
+#include "SoundEngine.h"
 
 static DrumState drum = { false, 0, 0, { 0, 0, 0, 0, 0 } };
 
@@ -151,6 +152,7 @@ void setDrumFrequency(int freq) {
 // =====================================================
 // Gesture trigger functions
 // =====================================================
+#ifndef TESTING // real drum functions
 static inline void Kick(unsigned long now) {
   Serial.println(F("[DRUM] Kick"));
   playDrumADSR(KICK_FREQ, KICK_ENV, now);
@@ -175,3 +177,23 @@ static inline void Cymbal(unsigned long now) {
   Serial.println(F("[DRUM] Cymbal"));
   playDrumADSR(CYMBAL_FREQ, CYMBAL_ENV, now);
 }
+#else // mock drum functions
+void Kick(unsigned long now) {
+  mockFunc = "Kick()";
+}
+void Snare(unsigned long now) {
+  mockFunc = "Snare()";
+}
+void Tom(unsigned long now) {
+  mockFunc = "Tom()";
+}
+void Hat(unsigned long now) {
+  mockFunc = "Hat()";
+}
+void Ride(unsigned long now) {
+  mockFunc = "Ride()";
+}
+void Cymbal(unsigned long now) {
+  mockFunc = "Cymbal()";
+}
+#endif
