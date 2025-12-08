@@ -454,6 +454,7 @@ void gpt6StartDuration(unsigned long ms) {
 }
 void gptPlaybackDurationISR() {
     // STOP timer (same as GPT3 ISR)
+    Serial.print("A");
     R_GPT6->GTCR_b.CST = 0;
 
     // CLEAR interrupt

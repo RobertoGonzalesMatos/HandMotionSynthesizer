@@ -48,6 +48,11 @@ void loop() {
       continue;
     }
 
+    if (c == 's') {
+      stopRecording();
+      continue;
+    }
+
     // ============================
     //   LIVE PERFORMANCE CONTROLS  
     //   (Live + Playback simultaneous OK)
