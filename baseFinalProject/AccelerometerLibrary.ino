@@ -518,13 +518,13 @@ void pollIMUAndUpdatePitch() {
         return;
 
       // ---- Convert to physical units ----
-      float ax_g   = (float)axr / 16384.0f;
-      float ay_g   = (float)ayr / 16384.0f;
-      float az_g   = (float)azr / 16384.0f;
+      ax_g   = (float)axr / 16384.0f;
+      ay_g   = (float)ayr / 16384.0f;
+      az_g   = (float)azr / 16384.0f;
 
-      float gx_dps = (float)gxr / 131.0f;
-      float gy_dps = (float)gyr / 131.0f;
-      float gz_dps = (float)gzr / 131.0f;
+      gx_dps = (float)gxr / 131.0f;
+      gy_dps = (float)gyr / 131.0f;
+      gz_dps = (float)gzr / 131.0f;
 
    
 
