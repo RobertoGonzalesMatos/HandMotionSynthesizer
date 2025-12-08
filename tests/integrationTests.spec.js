@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { before, beforeEach } from "node:test";
 
+// FSM state enums
 const state_enums = {
   s_INIT : 0,
   s_REG_CALC : 1,
@@ -9,15 +10,17 @@ const state_enums = {
   s_GESTURE_CALC : 4,
 } 
 
-
+//define initial FSM state and inputs
 const fsm_state = {noteFrequency: 0, vibratoLevel: 0, gestureModeOn : false, savedClock : 0, state: state_enums.s_INIT, harmonies: [false,false,false], wasRecording: false};
 const inputs = { x: 0, y: 0, z: 0, drumMode: false, clock: 0, isRecording: false};
 
+// Mock FSM update function
 function mockUpdateFSM(currState, inputs) {
   const ret = { ...currState };
   ret.serialMessages = [];
   switch (ret.state) {
     case state_enums.s_INIT:
+      // Input during initial state is registered as a note
       if (inputs.y !== 0) {
         ret.state = state_enums.s_REG_CALC;
         ret.noteFrequency = inputs.y;
@@ -29,36 +32,40 @@ function mockUpdateFSM(currState, inputs) {
         ret.state = state_enums.s_REG_WAIT;
         ret.savedClock = inputs.clock;
       }
-
       break;
     case state_enums.s_REG_WAIT:
+      // Check for silence
       if (inputs.z > 25) {
         ret.serialMessages.push("NOTE:0");
         ret.savedClock = inputs.clock;
         ret.state = state_enums.s_REG_CALC;
       }
+      // Check for new note
       if (inputs.y !== 0 && inputs.z <= 25) {
         ret.noteFrequency = inputs.y;
         ret.serialMessages.push("NOTE:C");
         ret.state = state_enums.s_REG_CALC;
       }
+      // Check for recording state change
       if (inputs.isRecording && !ret.wasRecording) {
         ret.serialMessages.push("REC:[");
         for (const note of ["A", "B", "C", "D"]) {
           ret.serialMessages.push(note);
         }
       }
+      // Ending recording
       if (!inputs.isRecording && ret.wasRecording) {
         ret.serialMessages.push("]");
       }
       ret.wasRecording = inputs.isRecording;
+      // Check for drum mode activation
       if (inputs.drumMode) {
         ret.gestureModeOn = true;
         ret.state = state_enums.s_GESTURE_WAIT;
       } 
-   
       break;
     case state_enums.s_GESTURE_WAIT:
+      // Check for drum mode deactivation
       if (!inputs.drumMode) {
         ret.gestureModeOn = false;
         ret.state = state_enums.s_REG_WAIT
@@ -67,15 +74,15 @@ function mockUpdateFSM(currState, inputs) {
       break;
   }
 
+  // Handle harmonies
   if (ret.harmonies[0]) ret.serialMessages.push("1_HARM:G");
   if (ret.harmonies[1]) ret.serialMessages.push("2_HARM:E");
   if (ret.harmonies[2]) ret.serialMessages.push("3_HARM:C");
 
-
   return ret;
 }
 
-test.describe("Arduino Piano UI Integration", () => {
+test.describe("Arduino-UI Integration", () => {
   test.beforeEach(async ({ page }) => {
     
      await page.goto(`file://${__dirname}/../piano.html`);
@@ -99,9 +106,11 @@ test.describe("Arduino Piano UI Integration", () => {
     for (const msg of result.serialMessages) {
       await page.evaluate((msg) => window.handleArduinoMessage(msg), msg);
     }
+
     const noteElement = page.locator("#current-note");
     const scoreElement = page.locator("#notes-layer .note-head");
     const state = result.state;
+
     await expect(noteElement).toHaveText("-", { timeout: 2000 });
     await expect(scoreElement).toHaveCount(0, { timeout: 2000 });
     expect(state).toBe(state_enums.s_INIT);
@@ -117,6 +126,7 @@ test.describe("Arduino Piano UI Integration", () => {
     const noteElement = page.locator("#current-note");
     const scoreElement = page.locator("#notes-layer .note-head");
     const state = result.state;
+
     await expect(noteElement).toHaveText("C", { timeout: 2000 });
     await expect(scoreElement).toHaveCount(1, { timeout: 2000 });
     expect(state).toBe(state_enums.s_REG_CALC);
@@ -148,6 +158,7 @@ test.describe("Arduino Piano UI Integration", () => {
     const noteElement = page.locator("#current-note");
     const scoreElement = page.locator("#notes-layer .note-head");
     const state = result.state;
+
     await expect(noteElement).toHaveText("C", { timeout: 2000 });
     await expect(scoreElement).toHaveCount(1, { timeout: 2000 });
     expect(state).toBe(state_enums.s_REG_CALC);
@@ -163,15 +174,13 @@ test.describe("Arduino Piano UI Integration", () => {
     const noteElement = page.locator("#current-note");
     const scoreElement = page.locator("#notes-layer .note-head");
     const state = result.state;
+
     await expect(noteElement).toHaveText("C", { timeout: 2000 });
     await expect(scoreElement).toHaveCount(4, { timeout: 2000 });
     expect(state).toBe(state_enums.s_REG_CALC);
-
   });
 
   test("Drum mode activation sends correct message", async ({ page }) => {
-    
-
     const modeButton = page.locator("#drum");
     const log = page.locator("#log");
     await expect(modeButton).toHaveText("Drum Mode");
@@ -184,6 +193,7 @@ test.describe("Arduino Piano UI Integration", () => {
        { ...fsm_state, state: state_enums.s_REG_WAIT },
        { ...inputs, drumMode: true }
      );
+
      if (gesture.gestureModeOn) {
       await page.evaluate(() => {
         window.drumMode = true;
@@ -191,13 +201,13 @@ test.describe("Arduino Piano UI Integration", () => {
        
      }
     const state = gesture.state;
-
     expect(state).toBe(state_enums.s_GESTURE_WAIT);
 
      const regular = mockUpdateFSM(
        { ...fsm_state, state: state_enums.s_GESTURE_WAIT },
        { ...inputs, drumMode: false }
      );
+
      if (!regular.gestureModeOn) {
        await page.evaluate(() => {
          window.drumMode = false;
@@ -206,7 +216,6 @@ test.describe("Arduino Piano UI Integration", () => {
 
     const regularState = regular.state;
     expect(regularState).toBe(state_enums.s_REG_WAIT);
-
   });
 
   test("Recording start and stop", async ({ page }) => {
@@ -214,7 +223,6 @@ test.describe("Arduino Piano UI Integration", () => {
     const recordButton = page.locator("#record");
     const log = page.locator("#log");
     await expect(recordButton).toContainText("Record");
-
 
     await recordButton.click();
     current_fsm = mockUpdateFSM(current_fsm, { ...inputs, isRecording: true });
