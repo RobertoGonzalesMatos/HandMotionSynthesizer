@@ -88,21 +88,13 @@ drumMode = inputs.drumModeOn;
 
 const int numTests = 16;
 const full_state testStatesIn[numTests] =  {{0, 0, 0, 0, s_INIT, {}}, {0, 0, 0, 0, s_INIT}, {0, 0, 0, 100, s_REG_CALC}, {1, 0, 0, 100, s_REG_WAIT}, {0, 0, 0, 100, s_REG_WAIT}, {1, 0, 0, 100, s_REG_WAIT}, 
-                                            // {600, 0, 0, 100, s_REG_WAIT}, 
-                                            {0, 0, 0, 0, s_INIT, {}}, // TEST 1 REPEAT TO TEMP REPLACE 7
-                                            {0, 0, 0, 0, s_REG_WAIT}, {0, 0, 1, 0, s_GESTURE_WAIT}, {0, 0, 0, 100, s_GESTURE_CALC}, {0, 0, 0, 100, s_GESTURE_WAIT}, {0, 0, 0, 100, s_GESTURE_WAIT}, {0, 0, 0, 100, s_GESTURE_WAIT}, {0, 0, 0, 100, s_GESTURE_WAIT}, {0, 0, 0, 100, s_GESTURE_WAIT}, {0, 0, 0, 100, s_GESTURE_WAIT}};
+                                            {600, 0, 0, 100, s_REG_WAIT}, {0, 0, 0, 0, s_REG_WAIT}, {0, 0, 1, 0, s_GESTURE_WAIT}, {0, 0, 0, 100, s_GESTURE_CALC}, {0, 0, 0, 100, s_GESTURE_WAIT}, {0, 0, 0, 100, s_GESTURE_WAIT}, {0, 0, 0, 100, s_GESTURE_WAIT}, {0, 0, 0, 100, s_GESTURE_WAIT}, {0, 0, 0, 100, s_GESTURE_WAIT}, {0, 0, 0, 100, s_GESTURE_WAIT}};
 const full_state testStatesOut[numTests] = {{0, 0, 0, 0, s_INIT, {}}, {100, 0, 0, 0, s_REG_CALC}, {0, 0, 0, 105, s_REG_WAIT}, {1, 30, 0, 105, s_REG_CALC}, {30, 0, 0, 105, s_REG_CALC}, {1, 0, 0, 105, s_REG_CALC}, 
-                                            // {600, 0, 0, 105, s_REG_CALC}, 
-                                            {0, 0, 0, 0, s_INIT, {}}, // TEST 1 REPEAT TO TEMP REPLACE 7
-                                            {0, 0, 1, 0, s_GESTURE_WAIT}, {0, 0, 0, 0, s_REG_WAIT}, {0, 0, 0, 105, s_GESTURE_WAIT}, {0, 0, 0, 105, s_GESTURE_CALC}, {0, 0, 0, 105, s_GESTURE_CALC}, {0, 0, 0, 105, s_GESTURE_CALC}, {0, 0, 0, 105, s_GESTURE_CALC}, {0, 0, 0, 105, s_GESTURE_CALC}, {0, 0, 0, 105, s_GESTURE_CALC}};
+                                            {600, 0, 0, 105, s_REG_CALC}, {0, 0, 1, 0, s_GESTURE_WAIT}, {0, 0, 0, 0, s_REG_WAIT}, {0, 0, 0, 105, s_GESTURE_WAIT}, {0, 0, 0, 105, s_GESTURE_CALC}, {0, 0, 0, 105, s_GESTURE_CALC}, {0, 0, 0, 105, s_GESTURE_CALC}, {0, 0, 0, 105, s_GESTURE_CALC}, {0, 0, 0, 105, s_GESTURE_CALC}, {0, 0, 0, 105, s_GESTURE_CALC}};
 const state_inputs testInputs[numTests] = {{0, 0, 0, 0, 0, 0}, {100, 0, 0, 0, 0, 0}, {0, 0, 0, 0, 0, 105}, {1, 30, 0, 0, 0, 105}, {30, 0, 0, 0, 0, 105}, {1, 0, 30, 0, 0, 105}, 
-                                          // {600, 0, 10, 0, 0, 105}, 
-                                          {0, 0, 0, 0, 0, 0}, // TEST 1 REPEAT TO TEMP REPLACE 7
-                                          {0, 0, 0, 1, 0, 0}, {0, 0, 0, 1, 1, 0}, {0, 0, 0, 0, 1, 105}, {100, 0, 0, 0, 1, 105}, {-100.0, 0, 0, 0, 1, 105}, {0, 100, 0, 0, 1, 105}, {0, -100, 0, 0, 1, 105}, {0, 0, 100, 0, 1, 105}, {0, 0, -100, 0, 1, 105}};
+                                          {600, 0, 10, 0, 0, 105}, {0, 0, 0, 1, 0, 0}, {0, 0, 0, 1, 1, 0}, {0, 0, 0, 0, 1, 105}, {100, 0, 0, 0, 1, 105}, {-100.0, 0, 0, 0, 1, 105}, {0, 100, 0, 0, 1, 105}, {0, -100, 0, 0, 1, 105}, {0, 0, 100, 0, 1, 105}, {0, 0, -100, 0, 1, 105}};
 char* testLastFunc[numTests] = {"", "", "", "", "", "doStop()", 
-                                // "", 
-                                "", // TEST 1 REPEAT TO TEMP REPLACE 7
-                                "", "", "", "Snare()", "Kick()", "Tom()", "Hat()", "Ride()", "Cymbal()"};
+                                "", "", "", "", "Snare()", "Kick()", "Tom()", "Hat()", "Ride()", "Cymbal()"};
 
 
 bool testAll() {

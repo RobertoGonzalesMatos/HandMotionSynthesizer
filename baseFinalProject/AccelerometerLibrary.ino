@@ -435,6 +435,12 @@ full_state updateFSM(full_state currState,
                 break;
             }
 
+            if (fiveMs && !drumMode && notePlaying &&
+                xRead > 0.0f && fabsf(zRead) <= PLAY_BAND_DEG) {
+              ret.savedClock = clock;
+              ret.state = s_REG_CALC;
+            }
+
             // ---- Switch to drum mode ----
             if (drumMode && !currState.gestureModeOn)
             {
