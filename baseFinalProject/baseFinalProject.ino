@@ -50,6 +50,11 @@ void loop() {
       startPlayback();
       continue;
     }
+    if (c == 'S') {
+      stopRecording();
+      continue;
+    }
+   
 
     // ============================
     //   LIVE PERFORMANCE CONTROLS  

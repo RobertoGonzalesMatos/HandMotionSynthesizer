@@ -380,6 +380,16 @@ void stopRecording() {
         unsigned long dur = now - lastChangeMs;
         recBuf[recCount++] = { lastRecFreq, dur };
     }
+    Serial.print ("REC:[");
+    for (int i = 0; i < recCount; i++) {
+        Serial.print("{\"freq\":");
+        Serial.print(recBuf[i].freq);
+        Serial.print(",\"duration\":");
+        Serial.print(recBuf[i].duration);
+        Serial.print("}");
+        if (i < recCount- 1) Serial.print(",");
+        }
+    Serial.println("]");
 }
 
 void recordSample(int f) {

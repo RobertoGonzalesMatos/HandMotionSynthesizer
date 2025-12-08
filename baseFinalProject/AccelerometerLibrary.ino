@@ -509,9 +509,6 @@ void pollIMUAndUpdatePitch() {
     lastIMUms = now;
 
     // ---- Read IMU raw ----
-    float ax_g, ay_g, az_g;
-    float gx_dps, gy_dps, gz_dps;
-
   
      int16_t axr, ayr, azr, gxr, gyr, gzr;
       if (!mpuReadRaw(axr, ayr, azr, gxr, gyr, gzr))

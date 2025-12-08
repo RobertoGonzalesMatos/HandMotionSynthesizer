@@ -1,29 +1,28 @@
 #include "DrumLibrary.h"
 #include <Arduino.h>
-#include "SoundEngine.h"
 
 static DrumState drum = { false, 0, 0, { 0, 0, 0, 0, 0 } };
 
 // =====================================================
 // ADSR Definitions
 // =====================================================
-static const DrumEnvelope KICK_ENV = { 3, 60, 20, 80, 0.2f };
-static const DrumEnvelope SNARE_ENV = { 2, 40, 30, 100, 0.25f };
-static const DrumEnvelope TOM_ENV = { 3.0f, 40.0f, 40.0f, 80.0f, 0.35f };
-static const DrumEnvelope HAT_ENV = { 1, 5, 10, 30, 0.1f };
-static const DrumEnvelope RIDE_ENV = { 3.0f, 50.0f, 120.0f, 150.0f, 0.4f };
-static const DrumEnvelope CYMBAL_ENV = { 2.0f, 60.0f, 150.0f, 200.0f, 0.4f };
+static const DrumEnvelope KICK_ENV = { 3, 60, 20, 30, 0.2f };
+static const DrumEnvelope SNARE_ENV = { 5, 40, 30, 70, 0.3f };
+static const DrumEnvelope TOM_ENV = { 4.0f, 40.0f, 40.0f, 80.0f, 0.4f };
+static const DrumEnvelope HAT_ENV = { 1, 5, 10, 30, 0.2f };
+static const DrumEnvelope RIDE_ENV = { 3.0f, 50.0f, 120.0f, 125.0f, 0.3f };
+static const DrumEnvelope CYMBAL_ENV = { 2.0f, 60.0f, 150.0f, 150.0f, 0.4f };
 // =====================================================
 // DRUM FREQUENCY DEFINITIONS (Actual Values)
 // =====================================================
 const int KICK_FREQ   = 60;   // low thump
-const int SNARE_FREQ  = 180;  // snappy
-const int TOM_FREQ    = 140;
+const int SNARE_FREQ  = 100;  // snappy
+const int TOM_FREQ    = 130;
 const int HAT_FREQ    = 6000; // white noise emulated by high freq
 const int RIDE_FREQ   = 350;  
-const int CYMBAL_FREQ = 8000;
+const int CYMBAL_FREQ = 7000;
 static unsigned long lastHitMs = 0;
-static const unsigned long HIT_COOLDOWN_MS = 120; // adjust to taste
+static const unsigned long HIT_COOLDOWN_MS = 300;
 
 // =====================================================
 // Envelope evaluation
@@ -105,7 +104,7 @@ lastHitMs = now;
     doStopDrums();
 
     // Start PWM on GPT2 at the drum frequency
-    playNote(freq);      // <- THIS is REQUIRED for sound
+    playNote(freq);  
 
     // Initialize envelope state
     drum.active  = true;
@@ -152,7 +151,7 @@ void setDrumFrequency(int freq) {
 // =====================================================
 // Gesture trigger functions
 // =====================================================
-#ifndef TESTING // real drum functions
+#ifndef TESTING
 static inline void Kick(unsigned long now) {
   Serial.println(F("[DRUM] Kick"));
   playDrumADSR(KICK_FREQ, KICK_ENV, now);
@@ -177,6 +176,7 @@ static inline void Cymbal(unsigned long now) {
   Serial.println(F("[DRUM] Cymbal"));
   playDrumADSR(CYMBAL_FREQ, CYMBAL_ENV, now);
 }
+
 #else // mock drum functions
 void Kick(unsigned long now) {
   mockFunc = "Kick()";
