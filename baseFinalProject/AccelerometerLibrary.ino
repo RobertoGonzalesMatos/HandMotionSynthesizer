@@ -485,18 +485,24 @@ void pollIMUAndUpdatePitch() {
     lastIMUms = now;
 
     // ---- Read IMU raw ----
-    int16_t axr, ayr, azr, gxr, gyr, gzr;
-    if (!mpuReadRaw(axr, ayr, azr, gxr, gyr, gzr))
+    float ax_g, ay_g, az_g;
+    float gx_dps, gy_dps, gz_dps;
+
+  
+     int16_t axr, ayr, azr, gxr, gyr, gzr;
+      if (!mpuReadRaw(axr, ayr, azr, gxr, gyr, gzr))
         return;
 
-    // ---- Convert to physical units ----
-    float ax_g   = (float)axr / 16384.0f;
-    float ay_g   = (float)ayr / 16384.0f;
-    float az_g   = (float)azr / 16384.0f;
+      // ---- Convert to physical units ----
+      float ax_g   = (float)axr / 16384.0f;
+      float ay_g   = (float)ayr / 16384.0f;
+      float az_g   = (float)azr / 16384.0f;
 
-    float gx_dps = (float)gxr / 131.0f;
-    float gy_dps = (float)gyr / 131.0f;
-    float gz_dps = (float)gzr / 131.0f;
+      float gx_dps = (float)gxr / 131.0f;
+      float gy_dps = (float)gyr / 131.0f;
+      float gz_dps = (float)gzr / 131.0f;
+
+   
 
     // ---- FSM CALL ----
     FS = updateFSM(FS, ax_g, ay_g, az_g,

@@ -85,6 +85,7 @@ let port, writer;
 const log = document.getElementById("log");
 let recBuffer = "";        // collect recording JSON here
 let recActive = false;    // flag for ongoing REC message
+let isTesting = false;
 
 document.getElementById("connect").onclick = async () => {
   try {
@@ -94,6 +95,7 @@ document.getElementById("connect").onclick = async () => {
           appendLog("Connected to Arduino!\n");
 
           readFromArduino();
+
   } catch (error) {
           console.error("Connection failed:", error);
           appendLog(`Error: ${error.message}\n`);
@@ -102,11 +104,18 @@ document.getElementById("connect").onclick = async () => {
 
 
 document.getElementById("drum").onclick = async () => {
-  if (!writer) {
-          appendLog("Please connect first.\n");
-          return;
-  }
-  await writer.write(new TextEncoder().encode("d"));
+        if (!window.isTesting) {
+                if (!writer) {
+                        appendLog("Please connect first.\n");
+                        return;
+                }
+                await writer.write(new TextEncoder().encode("d"));
+        } 
+//   if (!writer) {
+//           appendLog("Please connect first.\n");
+//           return;
+//   }
+//   await writer.write(new TextEncoder().encode("d"));
   if (!drumMode) {
           drumMode = true;
           document.getElementById("drum").textContent = "Regular Mode";
@@ -314,26 +323,36 @@ function updateScore(note) {
 
 //record button handler
 document.getElementById("record").onclick = async () => {
-  if (!writer) {
-          appendLog("Please connect first.\n");
-          return;
-  }
+        if (!window.isTesting) {
+              if (!writer) {
+                        appendLog("Please connect first.\n");
+                        return;
+                }    
+        }
+
   if (!isRecording) {
     //start
+    appendLog("Recording started...");
+    document.getElementById("record").textContent = "Stop Recording ⊘";
     isRecording = true;
     recBuffer = ""; 
     recActive = false;
-    await writer.write(new TextEncoder().encode("R"));
-    document.getElementById("record").textContent = "Stop Recording ⊘";
-    appendLog("Recording started...");
+    if (!window.isTesting) {
+       await writer.write(new TextEncoder().encode("R")); 
+    }
+    
   } else {
       // STOP
+      appendLog("Recording stopped. Waiting for data...");
     isRecording = false;
-    await writer.write(new TextEncoder().encode("r"));
     document.getElementById("record").textContent = "Record 🎤︎︎";
-    document.getElementById("record").classList.add("hidden");
-    document.getElementById("post-recording").classList.remove("hidden");
-    appendLog("Recording stopped. Waiting for data...");
+          document.getElementById("record").classList.add("hidden");
+          document.getElementById("post-recording").classList.remove("hidden");
+     if (!window.isTesting) {
+                  await writer.write(new TextEncoder().encode("r"));
+          }
+
+    
   }
 };
 
@@ -355,6 +374,11 @@ document.getElementById("discard").onclick = () => {
   document.getElementById("record").classList.remove("hidden");
   appendLog("Recording discarded.");
 };
+
+window.handleArduinoMessage = handleArduinoMessage;
+window.handleRecordingLine = handleRecordingLine;
+window.drumMode = drumMode;
+window.isTesting = isTesting;
 
 </script>
 
