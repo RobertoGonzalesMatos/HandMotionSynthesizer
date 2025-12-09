@@ -11,8 +11,8 @@ int capSensors[3];
 bool prevHarmonies[3];
 
 CapacitiveSensor s9 = CapacitiveSensor(10, 9);
-CapacitiveSensor s8 = CapacitiveSensor(10, 8);
-CapacitiveSensor s7 = CapacitiveSensor(10, 7);
+CapacitiveSensor s8 = CapacitiveSensor(10, 6);
+CapacitiveSensor s7 = CapacitiveSensor(10, 5);
 
 void testCalibration() {
   String labels[3];
@@ -69,28 +69,28 @@ void updateHaromnyControls() {
   // update the ports correspondingly and play note if they changed
   if (prevHarmonies[0] != FS.harmonies[0]) {
     if (FS.harmonies[0]) {
-      R_PFS->PORT[OUT_PORT].PIN[OUT_PIN1].PmnPFS_b.PDR = 1;
+      R_PFS->PORT[OUT_PORT1].PIN[OUT_PIN1].PmnPFS_b.PDR = 1;
     }
     else {
-      R_PFS->PORT[OUT_PORT].PIN[OUT_PIN1].PmnPFS_b.PDR = 0;
+      R_PFS->PORT[OUT_PORT1].PIN[OUT_PIN1].PmnPFS_b.PDR = 0;
     }
     playNote(FS.noteFrequency);
   }
   if (prevHarmonies[1] != FS.harmonies[1]) {
     if (FS.harmonies[1]) {
-      R_PFS->PORT[OUT_PORT].PIN[OUT_PIN2].PmnPFS_b.PDR = 1;
+      R_PFS->PORT[OUT_PORT2].PIN[OUT_PIN2].PmnPFS_b.PDR = 1;
     }
     else {
-      R_PFS->PORT[OUT_PORT].PIN[OUT_PIN2].PmnPFS_b.PDR = 0;
+      R_PFS->PORT[OUT_PORT2].PIN[OUT_PIN2].PmnPFS_b.PDR = 0;
     }
     playNote(FS.noteFrequency);
   }
   if (prevHarmonies[2] != FS.harmonies[2]) {
     if (FS.harmonies[2]) {
-      R_PFS->PORT[OUT_PORT].PIN[OUT_PIN3].PmnPFS_b.PDR = 1;
+      R_PFS->PORT[OUT_PORT3].PIN[OUT_PIN3].PmnPFS_b.PDR = 1;
     }
     else {
-      R_PFS->PORT[OUT_PORT].PIN[OUT_PIN3].PmnPFS_b.PDR = 0;
+      R_PFS->PORT[OUT_PORT3].PIN[OUT_PIN3].PmnPFS_b.PDR = 0;
     }
     playNote(FS.noteFrequency);
   }

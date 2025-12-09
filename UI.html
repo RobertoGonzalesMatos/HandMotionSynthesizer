@@ -224,7 +224,12 @@
             addHarmonyToScore(harm);
           }
 
-          handleRecordingLine(line);
+          if (line.startsWith("I2C endTransmission err")) {
+            appendLog("Transmission error. Please check the wiring!");
+          }
+          else {
+            handleRecordingLine(line);
+          }
         });
       }
 

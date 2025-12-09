@@ -437,8 +437,10 @@ full_state updateFSM(full_state currState,
 
             if (fiveMs && !drumMode && notePlaying &&
                 xRead > 0.0f && fabsf(zRead) <= PLAY_BAND_DEG) {
+              Serial.println(F("t 3–2c: stay on same note"));
               ret.savedClock = clock;
               ret.state = s_REG_CALC;
+              break;
             }
 
             // ---- Switch to drum mode ----
@@ -447,6 +449,7 @@ full_state updateFSM(full_state currState,
                 Serial.println(F("t 3–4: You are in Drum Mode!"));
                 ret.gestureModeOn = true;
                 ret.state = s_GESTURE_WAIT;
+                break;
             }
             break;
         }
