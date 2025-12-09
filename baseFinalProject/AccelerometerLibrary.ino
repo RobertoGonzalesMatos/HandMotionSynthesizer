@@ -353,7 +353,7 @@ full_state updateFSM(full_state currState,
 
         case s_REG_CALC:
         {
-            if (fiveMs && !drumMode)
+            if (fiveMs)
             {
                 Serial.println(F("t 2–3: reg_calc → reg_wait"));
                 pet_watchdog();
@@ -491,7 +491,7 @@ full_state updateFSM(full_state currState,
 
         case s_GESTURE_CALC:
         {
-            if (fiveMs && drumMode)
+            if (fiveMs)
             {
                 Serial.println(F("t 5–4: back to gesture wait"));
                 pet_watchdog();
