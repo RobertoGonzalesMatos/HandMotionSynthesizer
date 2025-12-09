@@ -371,7 +371,7 @@ full_state updateFSM(full_state currState,
 
             // ---- Silence condition ----
             if (fiveMs && !drumMode &&
-                (fabsf(zRead) > PLAY_BAND_DEG || xRead <= 0.0f))
+                (fabsf(zRead) > PLAY_BAND_DEG))
             {
                 Serial.println(F("t 3–2a: stop() (yaw out-of-band or no freq)"));
 
@@ -466,11 +466,12 @@ full_state updateFSM(full_state currState,
             #endif
 
             // Back to regular mode
-            if (!drumMode && currState.gestureModeOn)
+            if (!drumMode)
             {
                 Serial.println(F("t 4–3: You are in Regular Mode!"));
                 ret.gestureModeOn = false;
                 ret.state = s_REG_WAIT;
+                
                 break;
             }
 
@@ -481,8 +482,9 @@ full_state updateFSM(full_state currState,
                 if (gx >  25.0f) { Snare(now);  ret.state = s_GESTURE_CALC; ret.savedClock = clock; break; }
                 if (gy >  25.0f) {  Tom(now);    ret.state = s_GESTURE_CALC; ret.savedClock = clock; break; }
                 if (gy < -25.0f) { Hat(now);    ret.state = s_GESTURE_CALC; ret.savedClock = clock; break; }
-                if (ret.yaw_deg > PLAY_BAND_DEG) { Ride(now);   ret.state = s_GESTURE_CALC; ret.savedClock = clock; break; }
-                if (ret.yaw_deg < -PLAY_BAND_DEG) { Cymbal(now); ret.state = s_GESTURE_CALC; ret.savedClock = clock; break; }
+                if (ret.yaw_deg > 25) { Ride(now);   ret.state = s_GESTURE_CALC; ret.savedClock = clock; break; }
+                if (ret.yaw_deg < -25) { Cymbal(now); ret.state = s_GESTURE_CALC; ret.savedClock = clock; break; }
+                ret.state = s_GESTURE_CALC;
             }
             break;
         }

@@ -29,8 +29,8 @@ const int OUT_PIN2 = 12;
 const int OUT_PIN3 = 04;
 
 // Playback pin 
-const int OUT_PORT_PLAYBACK = 1;
-const int OUT_PIN_PLAYBACK  = 02;
+const int OUT_PORT_PLAYBACK = 4;
+const int OUT_PIN_PLAYBACK  = 11;
 
 int   curFreq  = 0;
 bool  liveActive = false;
@@ -164,16 +164,16 @@ void initGPT() {
  *********************************************************/
 void playNote(int freq) {
   R_GPT2->GTCR_b.CST = 0;
-  if (FS.harmonies[0]) R_GPT4->GTCR_b.CST = 0;
-  if (FS.harmonies[1]) R_GPT5->GTCR_b.CST = 0;
-  if (FS.harmonies[2]) R_GPT1->GTCR_b.CST = 0;
-    curFreq = freq;
+if (FS.harmonies[0]) R_GPT4->GTCR_b.CST = 0;
+if (FS.harmonies[1]) R_GPT5->GTCR_b.CST = 0;
+if (FS.harmonies[2]) R_GPT1->GTCR_b.CST = 0;
+curFreq = freq;
 
-    if (freq <= 0) {
-        liveActive = false;
-        R_GPT2->GTCR_b.CST = 0;
-        return;
-    }
+if (freq <= 0) {
+    liveActive = false;
+    R_GPT2->GTCR_b.CST = 0;
+    return;
+}
 
   int harmony = freq * pow(2, 4.0/12.0);
   int harmony2 = freq * pow(2, 7.0/12.0);

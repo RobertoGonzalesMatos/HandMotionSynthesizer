@@ -46,6 +46,7 @@ void testCalibration() {
 }
 
 void updateHaromnyControls() {
+  if (drumMode || FS.noteFrequency==0) return;
   // update harmony variables
   if ((&s9)->capacitiveSensorRaw(CTIME) > thresholds[0]) {
     FS.harmonies[0] = 1;
@@ -108,7 +109,7 @@ void harmonyInit() {
   capSensors[1] = 8;
   capSensors[2] = 7;
   thresholds[0] = 700; //700
-  thresholds[1] = 700; //700
+  thresholds[1] = 800; //700
   thresholds[2] = 700; //700
   // testCalibration();
 }
