@@ -1,6 +1,6 @@
 #ifndef SOUNDENGINE_H
 #define SOUNDENGINE_H
-// #define TESTING
+#define TESTING
 
 // Forward declaration so functions can accept Voice&
 // The actual struct is defined in SoundEngine.cpp / .ino
