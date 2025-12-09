@@ -25,9 +25,6 @@ void setup() {
   Serial.begin(9600);
   while (!Serial) {}
 
-  testAll();
-  while(true);
-
   initGPT();    // timers + soft synth
   mpuInit();    // IMU
   harmonyInit();
