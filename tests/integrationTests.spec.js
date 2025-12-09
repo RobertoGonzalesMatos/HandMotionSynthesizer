@@ -85,7 +85,7 @@ function mockUpdateFSM(currState, inputs) {
 test.describe("Arduino-UI Integration", () => {
   test.beforeEach(async ({ page }) => {
     
-     await page.goto(`file://${__dirname}/../piano.html`);
+     await page.goto(`file://${__dirname}/../UI.html`);
      await page.waitForLoadState("load");
      await page.waitForFunction(
        () => typeof window.handleArduinoMessage === "function" && typeof window.handleRecordingLine === "function"
