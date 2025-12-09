@@ -163,6 +163,7 @@ void initGPT() {
  *             LIVE NOTE (GPT2)
  *********************************************************/
 void playNote(int freq) {
+    playing = true;
   R_GPT2->GTCR_b.CST = 0;
 if (FS.harmonies[0]) R_GPT4->GTCR_b.CST = 0;
 if (FS.harmonies[1]) R_GPT5->GTCR_b.CST = 0;
@@ -212,6 +213,7 @@ if (freq <= 0) {
 }
 
 void stopPlay() {
+    playing = false;
     curFreq = 0;
     liveActive = false;
     R_GPT2->GTCR_b.CST = 0;

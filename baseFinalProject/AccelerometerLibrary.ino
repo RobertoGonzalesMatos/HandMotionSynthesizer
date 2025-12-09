@@ -77,7 +77,7 @@ const  float YAW_BIAS_ALPHA = 0.002f;
 const  float CALM_GZ_DPS    = 10.0f;
 
 // We only allow playing when yaw is near forward to act as a "gate".
-const  float PLAY_BAND_DEG  = 15.0f;      // ± yaw window
+const  float PLAY_BAND_DEG  = 25.0f;      // ± yaw window
 
 // ===== Audio state =====
 static bool  notePlaying  = false;

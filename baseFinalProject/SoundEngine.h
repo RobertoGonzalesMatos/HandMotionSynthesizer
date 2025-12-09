@@ -50,6 +50,8 @@ bool isRecording();
 bool isPlayingBack();
 void recordSample(int freq);
 
+bool playing;
+
 char* mockFunc;
 
 #endif

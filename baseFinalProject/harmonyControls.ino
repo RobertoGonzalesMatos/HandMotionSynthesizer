@@ -46,7 +46,7 @@ void testCalibration() {
 }
 
 void updateHaromnyControls() {
-  if (drumMode || FS.noteFrequency==0) return;
+  if (drumMode || FS.noteFrequency==0 || !playing) return;
   // update harmony variables
   if ((&s9)->capacitiveSensorRaw(CTIME) > thresholds[0]) {
     FS.harmonies[0] = 1;
