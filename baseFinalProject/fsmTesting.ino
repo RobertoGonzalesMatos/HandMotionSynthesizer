@@ -11,8 +11,6 @@ typedef struct {
 } state_inputs;
 
 
-
-
 bool testTransition(full_state start,
                    full_state end,
                    state_inputs inputs,
@@ -85,6 +83,78 @@ drumMode = inputs.drumModeOn;
  }
 }
 
+bool multiStateTests() {
+  char sToPrint[200];
+
+  // test transition 3-4-5
+  mockFunc = "";
+  full_state start = {0, 0, 0, 100, s_REG_WAIT};
+  drumMode = true;
+  full_state intermediate = updateFSM(start, 0, 0, 0, 0, 0, 0, 105);
+  full_state end = updateFSM(intermediate, 100, 0, 0, 0, 0, 0, 110);
+  if (end.state!=s_GESTURE_CALC || mockFunc!="Snare()"){
+    sprintf(sToPrint, "Test from %s to %s to %s FAILED", s2str(s_REG_WAIT), s2str(s_GESTURE_WAIT), s2str(s_GESTURE_CALC));
+    Serial.println(sToPrint);
+    sprintf(sToPrint, "found %s to %s to %s", s2str(start.state), s2str(intermediate.state), s2str(end.state));
+    Serial.println(sToPrint);
+    sprintf(sToPrint, "with mockFunc %s, expected %s", mockFunc, "Snare()");
+    Serial.println(sToPrint);
+    Serial.println("");
+    return false;
+  }
+  else {
+    sprintf(sToPrint, "Test from %s to %s to %s PASSED", s2str(start.state), s2str(intermediate.state), s2str(end.state));
+    Serial.println(sToPrint);
+    Serial.println("");
+  }
+
+  // test transition 5-4-3
+  mockFunc = "";
+  start = {0, 0, 1, 100, s_GESTURE_CALC};
+  drumMode = true;
+  intermediate = updateFSM(start, 0, 0, 0, 0, 0, 0, 105);
+  drumMode = false;
+  end = updateFSM(intermediate, 0, 0, 0, 0, 0, 0, 110);
+  if (end.state!=s_REG_WAIT || mockFunc!=""){
+    sprintf(sToPrint, "Test from %s to %s to %s FAILED", s2str(s_GESTURE_CALC), s2str(s_GESTURE_WAIT), s2str(s_REG_WAIT));
+    Serial.println(sToPrint);
+    sprintf(sToPrint, "found %s to %s to %s", s2str(start.state), s2str(intermediate.state), s2str(end.state));
+    Serial.println(sToPrint);
+    sprintf(sToPrint, "with mockFunc %s, expected %s", mockFunc, "");
+    Serial.println(sToPrint);
+    Serial.println("");
+    return false;
+  }
+  else {
+    sprintf(sToPrint, "Test from %s to %s to %s PASSED", s2str(start.state), s2str(intermediate.state), s2str(end.state));
+    Serial.println(sToPrint);
+    Serial.println("");
+  }
+
+  // test transition 3-2-3
+  mockFunc = "";
+  start = {0, 0, 0, 100, s_REG_WAIT};
+  intermediate = updateFSM(start, 100, 0, 0, 0, 0, 0, 105);
+  end = updateFSM(intermediate, 0, 0, 0, 0, 0, 0, 110);
+  if (end.state!=s_REG_WAIT || mockFunc!=""){
+    sprintf(sToPrint, "Test from %s to %s to %s FAILED", s2str(s_REG_WAIT), s2str(s_REG_CALC), s2str(s_REG_WAIT));
+    Serial.println(sToPrint);
+    sprintf(sToPrint, "found %s to %s to %s", s2str(start.state), s2str(intermediate.state), s2str(end.state));
+    Serial.println(sToPrint);
+    sprintf(sToPrint, "with mockFunc %s, expected %s", mockFunc, "");
+    Serial.println(sToPrint);
+    Serial.println("");
+    return false;
+  }
+  else {
+    sprintf(sToPrint, "Test from %s to %s to %s PASSED", s2str(start.state), s2str(intermediate.state), s2str(end.state));
+    Serial.println(sToPrint);
+    Serial.println("");
+  }
+
+  return true;
+}
+
 
 const int numTests = 16;
 const full_state testStatesIn[numTests] =  {{0, 0, 0, 0, s_INIT, {}}, {0, 0, 0, 0, s_INIT}, {0, 0, 0, 100, s_REG_CALC}, {1, 0, 0, 100, s_REG_WAIT}, {0, 0, 0, 100, s_REG_WAIT}, {1, 0, 0, 100, s_REG_WAIT}, 
@@ -109,6 +179,7 @@ bool testAll() {
    }
    Serial.println();
  }
+ if (!multiStateTests()) return false;
  Serial.println("All tests passed!");
  return true;
 }

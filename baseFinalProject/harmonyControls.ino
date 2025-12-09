@@ -11,8 +11,8 @@ int capSensors[3];
 bool prevHarmonies[3];
 
 CapacitiveSensor s9 = CapacitiveSensor(10, 9);
-CapacitiveSensor s8 = CapacitiveSensor(10, 8);
-CapacitiveSensor s7 = CapacitiveSensor(10, 7);
+CapacitiveSensor s8 = CapacitiveSensor(10, 6);
+CapacitiveSensor s7 = CapacitiveSensor(10, 5);
 
 void testCalibration() {
   String labels[3];
@@ -46,6 +46,7 @@ void testCalibration() {
 }
 
 void updateHaromnyControls() {
+  if (drumMode || FS.noteFrequency==0) return;
   // update harmony variables
   if ((&s9)->capacitiveSensorRaw(CTIME) > thresholds[0]) {
     FS.harmonies[0] = 1;
@@ -69,28 +70,28 @@ void updateHaromnyControls() {
   // update the ports correspondingly and play note if they changed
   if (prevHarmonies[0] != FS.harmonies[0]) {
     if (FS.harmonies[0]) {
-      R_PFS->PORT[OUT_PORT].PIN[OUT_PIN1].PmnPFS_b.PDR = 1;
+      R_PFS->PORT[OUT_PORT1].PIN[OUT_PIN1].PmnPFS_b.PDR = 1;
     }
     else {
-      R_PFS->PORT[OUT_PORT].PIN[OUT_PIN1].PmnPFS_b.PDR = 0;
+      R_PFS->PORT[OUT_PORT1].PIN[OUT_PIN1].PmnPFS_b.PDR = 0;
     }
     playNote(FS.noteFrequency);
   }
   if (prevHarmonies[1] != FS.harmonies[1]) {
     if (FS.harmonies[1]) {
-      R_PFS->PORT[OUT_PORT].PIN[OUT_PIN2].PmnPFS_b.PDR = 1;
+      R_PFS->PORT[OUT_PORT2].PIN[OUT_PIN2].PmnPFS_b.PDR = 1;
     }
     else {
-      R_PFS->PORT[OUT_PORT].PIN[OUT_PIN2].PmnPFS_b.PDR = 0;
+      R_PFS->PORT[OUT_PORT2].PIN[OUT_PIN2].PmnPFS_b.PDR = 0;
     }
     playNote(FS.noteFrequency);
   }
   if (prevHarmonies[2] != FS.harmonies[2]) {
     if (FS.harmonies[2]) {
-      R_PFS->PORT[OUT_PORT].PIN[OUT_PIN3].PmnPFS_b.PDR = 1;
+      R_PFS->PORT[OUT_PORT3].PIN[OUT_PIN3].PmnPFS_b.PDR = 1;
     }
     else {
-      R_PFS->PORT[OUT_PORT].PIN[OUT_PIN3].PmnPFS_b.PDR = 0;
+      R_PFS->PORT[OUT_PORT3].PIN[OUT_PIN3].PmnPFS_b.PDR = 0;
     }
     playNote(FS.noteFrequency);
   }
@@ -108,7 +109,7 @@ void harmonyInit() {
   capSensors[1] = 8;
   capSensors[2] = 7;
   thresholds[0] = 700; //700
-  thresholds[1] = 700; //700
+  thresholds[1] = 800; //700
   thresholds[2] = 700; //700
   // testCalibration();
 }

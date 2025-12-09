@@ -20,10 +20,13 @@ const unsigned int NOTE_INT      = 29;
 
 // OUTPUT pins
 const int OUT_PORT = 1;
+const int OUT_PORT1 = 4;
+const int OUT_PORT2 = 1;
+const int OUT_PORT3 = 3;
 const int OUT_PIN  = 6;
-const int OUT_PIN1 = 5;
-const int OUT_PIN2 = 7;
-const int OUT_PIN3 = 11;
+const int OUT_PIN1 = 10;
+const int OUT_PIN2 = 12;
+const int OUT_PIN3 = 04;
 
 // Playback pin 
 const int OUT_PORT_PLAYBACK = 4;
@@ -130,9 +133,9 @@ void initGPT() {
     R_GPT1->GTCR  = 0b010 << 24;
 
     // Harmony pins
-    R_PFS->PORT[OUT_PORT].PIN[OUT_PIN1].PmnPFS_b.PDR = 1;
-    R_PFS->PORT[OUT_PORT].PIN[OUT_PIN2].PmnPFS_b.PDR = 1;
-    R_PFS->PORT[OUT_PORT].PIN[OUT_PIN3].PmnPFS_b.PDR = 1;
+    R_PFS->PORT[OUT_PORT1].PIN[OUT_PIN1].PmnPFS_b.PDR = 1;
+    R_PFS->PORT[OUT_PORT2].PIN[OUT_PIN2].PmnPFS_b.PDR = 1;
+    R_PFS->PORT[OUT_PORT3].PIN[OUT_PIN3].PmnPFS_b.PDR = 1;
 
     R_ICU->IELSR[HARMONY_INT] = 0;
     R_ICU->IELSR[HARMONY_INT2] = 0;
@@ -161,16 +164,16 @@ void initGPT() {
  *********************************************************/
 void playNote(int freq) {
   R_GPT2->GTCR_b.CST = 0;
-  if (FS.harmonies[0]) R_GPT4->GTCR_b.CST = 0;
-  if (FS.harmonies[1]) R_GPT5->GTCR_b.CST = 0;
-  if (FS.harmonies[2]) R_GPT1->GTCR_b.CST = 0;
-    curFreq = freq;
+if (FS.harmonies[0]) R_GPT4->GTCR_b.CST = 0;
+if (FS.harmonies[1]) R_GPT5->GTCR_b.CST = 0;
+if (FS.harmonies[2]) R_GPT1->GTCR_b.CST = 0;
+curFreq = freq;
 
-    if (freq <= 0) {
-        liveActive = false;
-        R_GPT2->GTCR_b.CST = 0;
-        return;
-    }
+if (freq <= 0) {
+    liveActive = false;
+    R_GPT2->GTCR_b.CST = 0;
+    return;
+}
 
   int harmony = freq * pow(2, 4.0/12.0);
   int harmony2 = freq * pow(2, 7.0/12.0);
@@ -262,17 +265,17 @@ void playbackISR() {
  *                      HARMONY ISR
  *********************************************************/
 void gptISRHarmony() {
-    R_PFS->PORT[OUT_PORT].PIN[OUT_PIN1].PmnPFS_b.PODR ^= 1;
+    R_PFS->PORT[OUT_PORT1].PIN[OUT_PIN1].PmnPFS_b.PODR ^= 1;
     R_ICU->IELSR_b[HARMONY_INT].IR = 0;
 }
 
 void gptISRHarmony2() {
-    R_PFS->PORT[OUT_PORT].PIN[OUT_PIN2].PmnPFS_b.PODR ^= 1;
+    R_PFS->PORT[OUT_PORT2].PIN[OUT_PIN2].PmnPFS_b.PODR ^= 1;
     R_ICU->IELSR_b[HARMONY_INT2].IR = 0;
 }
 
 void gptISRHarmony3() {
-    R_PFS->PORT[OUT_PORT].PIN[OUT_PIN3].PmnPFS_b.PODR ^= 1;
+    R_PFS->PORT[OUT_PORT3].PIN[OUT_PIN3].PmnPFS_b.PODR ^= 1;
     R_ICU->IELSR_b[HARMONY_INT3].IR = 0;
 }
 

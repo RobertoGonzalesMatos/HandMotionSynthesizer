@@ -353,7 +353,7 @@ full_state updateFSM(full_state currState,
 
         case s_REG_CALC:
         {
-            if (fiveMs && !drumMode)
+            if (fiveMs)
             {
                 Serial.println(F("t 2–3: reg_calc → reg_wait"));
                 pet_watchdog();
@@ -371,7 +371,7 @@ full_state updateFSM(full_state currState,
 
             // ---- Silence condition ----
             if (fiveMs && !drumMode &&
-                (fabsf(zRead) > PLAY_BAND_DEG || xRead <= 0.0f))
+                (fabsf(zRead) > PLAY_BAND_DEG))
             {
                 Serial.println(F("t 3–2a: stop() (yaw out-of-band or no freq)"));
 
@@ -437,8 +437,10 @@ full_state updateFSM(full_state currState,
 
             if (fiveMs && !drumMode && notePlaying &&
                 xRead > 0.0f && fabsf(zRead) <= PLAY_BAND_DEG) {
+              Serial.println(F("t 3–2c: stay on same note"));
               ret.savedClock = clock;
               ret.state = s_REG_CALC;
+              break;
             }
 
             // ---- Switch to drum mode ----
@@ -447,6 +449,7 @@ full_state updateFSM(full_state currState,
                 Serial.println(F("t 3–4: You are in Drum Mode!"));
                 ret.gestureModeOn = true;
                 ret.state = s_GESTURE_WAIT;
+                break;
             }
             break;
         }
@@ -463,11 +466,12 @@ full_state updateFSM(full_state currState,
             #endif
 
             // Back to regular mode
-            if (!drumMode && currState.gestureModeOn)
+            if (!drumMode)
             {
                 Serial.println(F("t 4–3: You are in Regular Mode!"));
                 ret.gestureModeOn = false;
                 ret.state = s_REG_WAIT;
+                
                 break;
             }
 
@@ -478,15 +482,16 @@ full_state updateFSM(full_state currState,
                 if (gx >  25.0f) { Snare(now);  ret.state = s_GESTURE_CALC; ret.savedClock = clock; break; }
                 if (gy >  25.0f) {  Tom(now);    ret.state = s_GESTURE_CALC; ret.savedClock = clock; break; }
                 if (gy < -25.0f) { Hat(now);    ret.state = s_GESTURE_CALC; ret.savedClock = clock; break; }
-                if (ret.yaw_deg > PLAY_BAND_DEG) { Ride(now);   ret.state = s_GESTURE_CALC; ret.savedClock = clock; break; }
-                if (ret.yaw_deg < -PLAY_BAND_DEG) { Cymbal(now); ret.state = s_GESTURE_CALC; ret.savedClock = clock; break; }
+                if (ret.yaw_deg > 25) { Ride(now);   ret.state = s_GESTURE_CALC; ret.savedClock = clock; break; }
+                if (ret.yaw_deg < -25) { Cymbal(now); ret.state = s_GESTURE_CALC; ret.savedClock = clock; break; }
+                ret.state = s_GESTURE_CALC;
             }
             break;
         }
 
         case s_GESTURE_CALC:
         {
-            if (fiveMs && drumMode)
+            if (fiveMs)
             {
                 Serial.println(F("t 5–4: back to gesture wait"));
                 pet_watchdog();
@@ -515,13 +520,13 @@ void pollIMUAndUpdatePitch() {
         return;
 
       // ---- Convert to physical units ----
-      ax_g   = (float)axr / 16384.0f;
-      ay_g   = (float)ayr / 16384.0f;
-      az_g   = (float)azr / 16384.0f;
+      float ax_g   = (float)axr / 16384.0f;
+      float ay_g   = (float)ayr / 16384.0f;
+      float az_g   = (float)azr / 16384.0f;
 
-      gx_dps = (float)gxr / 131.0f;
-      gy_dps = (float)gyr / 131.0f;
-      gz_dps = (float)gzr / 131.0f;
+      float gx_dps = (float)gxr / 131.0f;
+      float gy_dps = (float)gyr / 131.0f;
+      float gz_dps = (float)gzr / 131.0f;
 
    
 

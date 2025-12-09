@@ -1,383 +1,381 @@
 <!DOCTYPE html>
 <html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Arduino UI 🎹</title>
+  </head>
+  <link rel="stylesheet" href="style.css" />
 
-<head>
-        <meta charset="UTF-8">
-        <title>Arduino UI 🎹</title>
-</head>
-<link rel="stylesheet" href="style.css">
+  <body>
+    <section id="left-container">
+      <section id="modes-container">
+        <h2>Modes</h2>
+        <p>
+          Select different modes to change the sound and behavior of the
+          synthesizer.
+        </p>
+        <button id="drum">Drum Mode</button>
+      </section>
+    </section>
 
-<body>
+    <section id="middle-container">
+      <header>
+        <h1>Motion-based Synthesizer</h1>
+      </header>
+      <button id="connect">🔌 Connect to Arduino</button>
+      <section id="piano-container">
+        <div id="piano">
+          <!-- White keys -->
+          <div class="key white" data-note="C">C</div>
+          <div class="key white" data-note="D">D</div>
+          <div class="key white" data-note="E">E</div>
+          <div class="key white" data-note="F">F</div>
+          <div class="key white" data-note="G">G</div>
+          <div class="key white" data-note="A">A</div>
+          <div class="key white" data-note="B">B</div>
 
-        <section id="left-container">
-                <section id="modes-container">
-                        <h2>Modes</h2>
-                        <p>Select different modes to change the sound and behavior of the synthesizer.</p>
-                        <button id="drum">Drum Mode</button>
-                </section>
-        </section>
+          <!-- Black keys -->
+          <div class="key black" data-note="C#"></div>
+          <div class="key black" data-note="D#"></div>
+          <div class="key black" data-note="F#"></div>
+          <div class="key black" data-note="G#"></div>
+          <div class="key black" data-note="A#"></div>
+        </div>
+      </section>
 
-        <section id="middle-container">
-                <header>
-                        <h1>Motion-based Synthesizer</h1>
-                </header>
-                <button id="connect">🔌 Connect to Arduino</button>
-                <section id="piano-container">
-                        <div id="piano">
-                                <!-- White keys -->
-                                <div class="key white" data-note="C">C</div>
-                                <div class="key white" data-note="D">D</div>
-                                <div class="key white" data-note="E">E</div>
-                                <div class="key white" data-note="F">F</div>
-                                <div class="key white" data-note="G">G</div>
-                                <div class="key white" data-note="A">A</div>
-                                <div class="key white" data-note="B">B</div>
-                
-                                <!-- Black keys -->
-                                <div class="key black" data-note="C#"></div>
-                                <div class="key black" data-note="D#"></div>
-                                <div class="key black" data-note="F#"></div>
-                                <div class="key black" data-note="G#"></div>
-                                <div class="key black" data-note="A#"></div>
-                        </div>
-                </section>
-                
-                <section id="score-container">
-                        <h2>Now Playing: <span id="current-note">—</span></h2>
-                        <div id="score">
-                                <img id="treble-clef" src="treble_clef.svg">
-                                <div id="notes-container">
-                                        <div id="notes-layer"></div>
-                                        <div class="staff-line"></div>
-                                        <div class="staff-line"></div>
-                                        <div class="staff-line"></div>
-                                        <div class="staff-line"></div>
-                                        <div class="staff-line"></div>
-                                </div>
-                                
-                        </div>
-                </section>
-                <pre id="log"></pre>
-        </section>
+      <section id="score-container">
+        <h2>Now Playing: <span id="current-note">—</span></h2>
+        <div id="score">
+          <img id="treble-clef" src="treble_clef.svg" />
+          <div id="notes-container">
+            <div id="notes-layer"></div>
+            <div class="staff-line"></div>
+            <div class="staff-line"></div>
+            <div class="staff-line"></div>
+            <div class="staff-line"></div>
+            <div class="staff-line"></div>
+          </div>
+        </div>
+      </section>
+      <pre id="log"></pre>
+    </section>
 
-        <section id="right-container">
-                <section id="record-container">
-                        <h2>Record</h2>
-                        <p>Select to record, replay, and save your synthesizer sounds.</p>
-                        <button id="record">Record 🎤︎︎</button>
-                        <div id="post-recording" class="hidden">
-                                <button id="replay">Replay ⤺</button>
-                                <div class="button-row">
-                                        <button id="save">Save ☑</button>
-                                        <button id="discard">Discard ×</button>
-                                </div>
-                        </div>
-                </section>
-        </section>
+    <section id="right-container">
+      <section id="record-container">
+        <h2>Record</h2>
+        <p>Select to record, replay, and save your synthesizer sounds.</p>
+        <button id="record">Record 🎤︎︎</button>
+        <div id="post-recording" class="hidden">
+          <button id="replay">Replay ⤺</button>
+          <div class="button-row">
+            <button id="save">Save ☑</button>
+            <button id="discard">Discard ×</button>
+          </div>
+        </div>
+      </section>
+    </section>
 
+    <script>
+      let nextX = 50; //keep track of note head x position
+      let hasStarted = false; // track when first note is played
+      let drumMode = false; //track if in drum mode
+      let isRecording = false; //track if recording
+      let port, writer;
+      const log = document.getElementById("log");
+      let recBuffer = ""; // collect recording JSON here
+      let recActive = false; // flag for ongoing REC message
+      let isTesting = false;
 
-
-
-<script>
-let nextX = 50; //keep track of note head x position
-let hasStarted = false; // track when first note is played
-let drumMode = false; //track if in drum mode
-let isRecording = false; //track if recording
-let port, writer;
-const log = document.getElementById("log");
-let recBuffer = "";        // collect recording JSON here
-let recActive = false;    // flag for ongoing REC message
-let isTesting = false;
-
-document.getElementById("connect").onclick = async () => {
-  try {
+      document.getElementById("connect").onclick = async () => {
+        try {
           port = await navigator.serial.requestPort();
           await port.open({ baudRate: 9600 });
           writer = port.writable.getWriter();
           appendLog("Connected to Arduino!\n");
 
           readFromArduino();
-
-  } catch (error) {
+        } catch (error) {
           console.error("Connection failed:", error);
           appendLog(`Error: ${error.message}\n`);
-  }
-};
+        }
+      };
 
-
-document.getElementById("drum").onclick = async () => {
+      document.getElementById("drum").onclick = async () => {
         if (!window.isTesting) {
-                if (!writer) {
-                        appendLog("Please connect first.\n");
-                        return;
-                }
-                await writer.write(new TextEncoder().encode("d"));
-        } 
-//   if (!writer) {
-//           appendLog("Please connect first.\n");
-//           return;
-//   }
-//   await writer.write(new TextEncoder().encode("d"));
-  if (!drumMode) {
+          if (!writer) {
+            appendLog("Please connect first.\n");
+            return;
+          }
+          await writer.write(new TextEncoder().encode("d"));
+        }
+        //   if (!writer) {
+        //           appendLog("Please connect first.\n");
+        //           return;
+        //   }
+        //   await writer.write(new TextEncoder().encode("d"));
+        if (!drumMode) {
           drumMode = true;
           document.getElementById("drum").textContent = "Regular Mode";
           appendLog("Switched to drum mode.\n");
-  } else {
+
+          //hide score + reset displayed note
+          document.getElementById("score-container").style.opacity = "0.5";
+          document.getElementById("current-note").textContent = "-";
+        } else {
           drumMode = false;
           document.getElementById("drum").textContent = "Drum Mode";
           appendLog("Switched to regular mode.\n");
-  }
-};
 
+          //hide score + reset displayed note
+          document.getElementById("score-container").style.opacity = "1";
+        }
+      };
 
-const notePositions = {
-  "C": 7,
-  "C#": 7,
-  "D": 1,
-  "D#": 1,
-  "E": -5,
-  "F": 31,
-  "F#": 31,
-  "G": 25,
-  "G#": 25,
-  "A": 19,
-  "A#": 19,
-  "B": 13
-};
+      const notePositions = {
+        C: 7,
+        "C#": 7,
+        D: 1,
+        "D#": 1,
+        E: -5,
+        F: 31,
+        "F#": 31,
+        G: 25,
+        "G#": 25,
+        A: 19,
+        "A#": 19,
+        B: 13,
+      };
 
-
-
-
-document.querySelectorAll(".key").forEach(key => {
-  key.onclick = () => {
+      document.querySelectorAll(".key").forEach((key) => {
+        key.onclick = () => {
           hasStarted = true; //start playing after first click
           sendNote(key.dataset.note); //send note
-  };
-});
-
-
-async function sendNote(note) {
-  if (!hasStarted) { //first click check
-          appendLog("Click a note first to start playing.\n");
-          return;
-  }
-
-  if (!writer) {
-          appendLog("Please connect first.\n");
-          return;
-  }
-
-  await writer.write(new TextEncoder().encode(note)); //send note to Arduino
-  appendLog(`Played note: ${note}\n`);
-
-  updateScore(note); //update score display
-}
-
-
-let reader;
-
-//read data from Arduino
-async function readFromArduino() {
-  while (port.readable) {
-            reader = port.readable.getReader();
-    try {
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        if (value) {
-          const text = new TextDecoder().decode(value);
-          handleArduinoMessage(text);
-        }
-      }
-    } catch (error) {
-      console.error(error);
-    } finally {
-      reader.releaseLock();
-    }
-  }
-}
-
-//handle messages from Arduino
-function handleArduinoMessage(msg) {
-  msg.split("\n").forEach(line => {
-    line = line.trim();
-
-    //main note
-    if (line.startsWith("NOTE:")) {
-      const note = line.slice(5);
-      if (note === "0") {
-          document.getElementById("current-note").textContent = "-";
-          return;
-      } else {
-          updateScore(note);  // main note (moves x forward)
-      }
-    }
-
-    // harmony lines
-    if (line.startsWith("1_HARM:")) {
-        const harm = line.slice(7);
-        addHarmonyToScore(harm);
-    }
-    if (line.startsWith("2_HARM:")) {
-        const harm = line.slice(7);
-        addHarmonyToScore(harm);
-    }
-    if (line.startsWith("3_HARM:")) {
-        const harm = line.slice(7);
-        addHarmonyToScore(harm);
-    }
-
-    handleRecordingLine(line);
-
-  });
-}
-
-//add harmony note to score
-function addHarmonyToScore(note) {
-    const notesLayer = document.getElementById("notes-layer");
-    const y = notePositions[note];
-
-    //use the previous note's x position
-    const x = nextX - 40;  
-
-    const div = document.createElement("div");
-    div.className = "note-head harmony-note";
-    div.style.top = y + "px";
-    div.style.left = x + "px";
-
-    console.log("Adding harmony note:", note, "at", x, y);
-
-    notesLayer.appendChild(div);
-}
-
-
-//handle lines related to recording
-function handleRecordingLine(line) {
-  //Start of recording
-  if (line.startsWith("REC:[")) {
-      recActive = true;
-      recBuffer = line.slice(4).trim();   //store initial chunk
-      return;
-  }
-
-  //if we are not in REC mode, ignore
-  if (!recActive) return;
-
-  //continue buffering
-  recBuffer += line;
-
-  //if JSON array is complete
-  if (recBuffer.endsWith("]")) {
-      recActive = false;
-      appendLog("Full recording received.");
-  }
-}
-
-//Finalize + save recording
-function finalizeRecording(jsonString) {
-  try {
-      const events = JSON.parse(jsonString);
-
-      const blob = new Blob([JSON.stringify(events)], {
-          type: "application/json"
+        };
       });
 
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "recording.json";
-
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-
-      URL.revokeObjectURL(url);
-
-      appendLog("Saved recording.json!");
-  } catch (err) {
-      console.error(err);
-      appendLog("JSON Parse Error — invalid recording.");
-  }
-}
-  
-
-//add note head to score display + handle scrolling
-function updateScore(note) {
-  const notesLayer = document.getElementById("notes-layer");
-  const y = notePositions[note];
-  const x = nextX;
-
-  const div = document.createElement("div");
-  div.className = "note-head";
-  div.style.top = y + "px";
-  div.style.left = x + "px";
-
-  notesLayer.appendChild(div);
-  nextX += 40;
-
-  //auto-scroll
-  if (nextX > 700) {
-          notesLayer.style.transform = `translateX(${700 - nextX}px)`;
-  }
-
-  document.getElementById("current-note").textContent = note; //update "now playing"
-}
-
-//record button handler
-document.getElementById("record").onclick = async () => {
-        if (!window.isTesting) {
-              if (!writer) {
-                        appendLog("Please connect first.\n");
-                        return;
-                }    
+      async function sendNote(note) {
+        if (!hasStarted) {
+          //first click check
+          appendLog("Click a note first to start playing.\n");
+          return;
         }
 
-  if (!isRecording) {
-    //start
-    appendLog("Recording started...");
-    document.getElementById("record").textContent = "Stop Recording ⊘";
-    isRecording = true;
-    recBuffer = ""; 
-    recActive = false;
-    if (!window.isTesting) {
-       await writer.write(new TextEncoder().encode("R")); 
-    }
-    
-  } else {
-      // STOP
-      appendLog("Recording stopped. Waiting for data...");
-    isRecording = false;
-    document.getElementById("record").textContent = "Record 🎤︎︎";
-          document.getElementById("record").classList.add("hidden");
-          document.getElementById("post-recording").classList.remove("hidden");
-     if (!window.isTesting) {
-                  await writer.write(new TextEncoder().encode("S"));
+        if (!writer) {
+          appendLog("Please connect first.\n");
+          return;
+        }
+
+        await writer.write(new TextEncoder().encode(note)); //send note to Arduino
+        appendLog(`Played note: ${note}\n`);
+
+        updateScore(note); //update score display
+      }
+
+      let reader;
+
+      //read data from Arduino
+      async function readFromArduino() {
+        while (port.readable) {
+          reader = port.readable.getReader();
+          try {
+            while (true) {
+              const { value, done } = await reader.read();
+              if (done) break;
+              if (value) {
+                const text = new TextDecoder().decode(value);
+                handleArduinoMessage(text);
+              }
+            }
+          } catch (error) {
+            console.error(error);
+          } finally {
+            reader.releaseLock();
+          }
+        }
+      }
+
+      //handle messages from Arduino
+      function handleArduinoMessage(msg) {
+        msg.split("\n").forEach((line) => {
+          line = line.trim();
+
+          //main note
+          if (line.startsWith("NOTE:")) {
+            const note = line.slice(5);
+            if (note === "0") {
+              document.getElementById("current-note").textContent = "-";
+              return;
+            } else {
+              updateScore(note); // main note (moves x forward)
+            }
           }
 
-    
-  }
-};
+          // harmony lines
+          if (line.startsWith("1_HARM:")) {
+            const harm = line.slice(7);
+            addHarmonyToScore(harm);
+          }
+          if (line.startsWith("2_HARM:")) {
+            const harm = line.slice(7);
+            addHarmonyToScore(harm);
+          }
+          if (line.startsWith("3_HARM:")) {
+            const harm = line.slice(7);
+            addHarmonyToScore(harm);
+          }
 
-function appendLog(message) {
+          if (line.startsWith("I2C endTransmission err")) {
+            appendLog("Transmission error. Please check the wiring!");
+          }
+          else {
+            handleRecordingLine(line);
+          }
+        });
+      }
+
+      //add harmony note to score
+      function addHarmonyToScore(note) {
+        if (drumMode) return;
+        const notesLayer = document.getElementById("notes-layer");
+        const y = notePositions[note];
+
+        //use the previous note's x position
+        const x = nextX - 40;
+
+        const div = document.createElement("div");
+        div.className = "note-head harmony-note";
+        div.style.top = y + "px";
+        div.style.left = x + "px";
+
+        console.log("Adding harmony note:", note, "at", x, y);
+
+        notesLayer.appendChild(div);
+      }
+
+      //handle lines related to recording
+      function handleRecordingLine(line) {
+        //Start of recording
+        if (line.startsWith("REC:[")) {
+          recActive = true;
+          recBuffer = line.slice(4).trim(); //store initial chunk
+          return;
+        }
+
+        //if we are not in REC mode, ignore
+        if (!recActive) return;
+
+        //continue buffering
+        recBuffer += line;
+
+        //if JSON array is complete
+        if (recBuffer.endsWith("]")) {
+          recActive = false;
+          appendLog("Full recording received.");
+        }
+      }
+
+      //Finalize + save recording
+      function finalizeRecording(jsonString) {
+        try {
+          const events = JSON.parse(jsonString);
+
+          const blob = new Blob([JSON.stringify(events)], {
+            type: "application/json",
+          });
+
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = "recording.json";
+
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+
+          URL.revokeObjectURL(url);
+
+          appendLog("Saved recording.json!");
+        } catch (err) {
+          console.error(err);
+          appendLog("JSON Parse Error — invalid recording.");
+        }
+      }
+
+      //add note head to score display + handle scrolling
+      function updateScore(note) {
+        if (drumMode) return;
+        const notesLayer = document.getElementById("notes-layer");
+        const y = notePositions[note];
+        const x = nextX;
+
+        const div = document.createElement("div");
+        div.className = "note-head";
+        div.style.top = y + "px";
+        div.style.left = x + "px";
+
+        notesLayer.appendChild(div);
+        nextX += 40;
+
+        //auto-scroll
+        if (nextX > 700) {
+          notesLayer.style.transform = `translateX(${700 - nextX}px)`;
+        }
+
+        document.getElementById("current-note").textContent = note; //update "now playing"
+      }
+
+      //record button handler
+      document.getElementById("record").onclick = async () => {
+        if (!window.isTesting) {
+          if (!writer) {
+            appendLog("Please connect first.\n");
+            return;
+          }
+        }
+
+        if (!isRecording) {
+          //start
+          appendLog("Recording started...");
+          document.getElementById("record").textContent = "Stop Recording ⊘";
+          isRecording = true;
+          recBuffer = "";
+          recActive = false;
+          if (!window.isTesting) {
+            await writer.write(new TextEncoder().encode("R"));
+          }
+        } else {
+          // STOP
+          appendLog("Recording stopped. Waiting for data...");
+          isRecording = false;
+          document.getElementById("record").textContent = "Record 🎤︎︎";
+          document.getElementById("record").classList.add("hidden");
+          document.getElementById("post-recording").classList.remove("hidden");
+          if (!window.isTesting) {
+            await writer.write(new TextEncoder().encode("S"));
+          }
+        }
+      };
+
+      function appendLog(message) {
         const log = document.getElementById("log");
         log.textContent += message + "\n";
         log.scrollTop = log.scrollHeight;
-}
+      }
 
-document.getElementById("save").onclick = () => {
-  finalizeRecording(recBuffer);
-  document.getElementById("post-recording").classList.add("hidden");
-  document.getElementById("record").classList.remove("hidden");
-};
+      document.getElementById("save").onclick = () => {
+        finalizeRecording(recBuffer);
+        document.getElementById("post-recording").classList.add("hidden");
+        document.getElementById("record").classList.remove("hidden");
+      };
 
-document.getElementById("discard").onclick = () => {
-  recBuffer = "";
-  document.getElementById("post-recording").classList.add("hidden");
-  document.getElementById("record").classList.remove("hidden");
-  appendLog("Recording discarded.");
-};
+      document.getElementById("discard").onclick = () => {
+        recBuffer = "";
+        document.getElementById("post-recording").classList.add("hidden");
+        document.getElementById("record").classList.remove("hidden");
+        appendLog("Recording discarded.");
+      };
 
-//repay button handler
+      //repay button handler
       document.getElementById("replay").onclick = async () => {
         // if (!writer) {
         //     appendLog("Please connect first.\n");
@@ -391,15 +389,12 @@ document.getElementById("discard").onclick = () => {
           console.error(err);
           appendLog("Failed to replay.");
         }
-};
+      };
 
-window.handleArduinoMessage = handleArduinoMessage;
-window.handleRecordingLine = handleRecordingLine;
-window.drumMode = drumMode;
-window.isTesting = isTesting;
-
-</script>
-
-</body>
-
+      window.handleArduinoMessage = handleArduinoMessage;
+      window.handleRecordingLine = handleRecordingLine;
+      window.drumMode = drumMode;
+      window.isTesting = isTesting;
+    </script>
+  </body>
 </html>
