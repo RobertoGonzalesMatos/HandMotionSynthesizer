@@ -108,11 +108,6 @@
           }
           await writer.write(new TextEncoder().encode("d"));
         }
-        //   if (!writer) {
-        //           appendLog("Please connect first.\n");
-        //           return;
-        //   }
-        //   await writer.write(new TextEncoder().encode("d"));
         if (!drumMode) {
           drumMode = true;
           document.getElementById("drum").textContent = "Regular Mode";
@@ -377,10 +372,6 @@
 
       //repay button handler
       document.getElementById("replay").onclick = async () => {
-        // if (!writer) {
-        //     appendLog("Please connect first.\n");
-        //     return;
-        // }
 
         try {
           await writer.write(new TextEncoder().encode("r")); //send lowercase 'r' to Arduino so that replay is triggered
