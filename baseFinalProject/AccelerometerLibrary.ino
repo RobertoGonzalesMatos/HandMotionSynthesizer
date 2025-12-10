@@ -3,7 +3,7 @@
 #include <math.h>
 #include "notes.h"
 
-static full_state FS = {0, 0, false, 0, s_INIT};
+static full_state FS = {0, 0, false, 0, s_INIT,0,0,0,0,0};
 extern int  baseFreq;
 extern void playNote(int freq);
 extern void stopPlay();
@@ -30,8 +30,6 @@ const unsigned long IMU_DT_MS = 10;
 
 static const float vibRates[4] = {0.0f, 2.0f, 4.0f, 6.0f};
 
-static float pitch_est = 0.0f;  // deg, forward/back
-static float roll_est  = 0.0f;  // deg, left/right
 static unsigned long last_t_ms = 0;
 
 static float yaw_deg = 0.0f;
@@ -172,6 +170,31 @@ full_state updateFSM(full_state currState,
     ret.yaw_deg = az_g;
     #endif
 
+    if(!drumMode){
+        float ux, uy, uz;
+        computeMountTransform(ax_g, ay_g, az_g, ux, uy, uz);
+        float pitch_acc, roll_acc;
+        computeAccelAngles(ux, uy, uz, pitch_acc, roll_acc);
+        applyComplementaryFilter(gx_dps, gy_dps,
+                                pitch_acc, roll_acc,
+                                dt,
+                                ret.pitch_est, ret.roll_est);
+        Serial.print(ux);
+        updateYaw(gz_dps, dt,
+                  ret.yaw_bias_dps,
+                  ret.yaw_deg);
+        ret.noteFrequency = computeTargetFreq(ret.pitch_est);
+
+        int vibLevel;
+        float vibRateHz;
+        computeVibratoBucket(ret.roll_est, vibLevel, vibRateHz);
+        ret.vibratoLevel = vibLevel; 
+        float yRead = vibRateHz;
+
+        float xRead = (float)ret.noteFrequency;
+        float zRead = ret.yaw_deg;
+    }
+
     switch (currState.state)
     {
         case s_INIT:
@@ -198,26 +221,6 @@ full_state updateFSM(full_state currState,
             if (fiveMs)
             {
                 Serial.println(F("t 2–3: reg_calc → reg_wait"));
-                float ux, uy, uz = ax_g, ay_g, az_g;
-                float pitch_acc, roll_acc;
-                computeAccelAngles(ux, uy, uz, pitch_acc, roll_acc);
-                applyComplementaryFilter(gx_dps, gy_dps,
-                                        pitch_acc, roll_acc,
-                                        dt,
-                                        ret.pitch_est, ret.roll_est);
-                updateYaw(gz_dps, dt,
-                          ret.yaw_bias_dps,
-                          ret.yaw_deg);
-                ret.noteFrequency = computeTargetFreq(ret.pitch_est);
-
-                int vibLevel;
-                float vibRateHz;
-                computeVibratoBucket(ret.roll_est, vibLevel, vibRateHz);
-                ret.vibratoLevel = vibLevel; 
-                float yRead = vibRateHz;
-
-                float xRead = (float)ret.noteFrequency;
-                float zRead = ret.yaw_deg;
                 petWDT();
                 ret.savedClock = clock;
                 ret.state = s_REG_WAIT;

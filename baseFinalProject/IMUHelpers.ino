@@ -1,6 +1,14 @@
 #include "IMUHelpers.h"
 #include "SoundEngine.h"
 
+void computeMountTransform(float ax, float ay, float az,
+                           float &ux, float &uy, float &uz)
+{
+    ux = ax;
+    uy = ay;
+    uz = az;
+}
+
 void computeAccelAngles(float ux, float uy, float uz,
                         float &pitch_acc, float &roll_acc)
 {

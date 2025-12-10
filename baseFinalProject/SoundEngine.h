@@ -46,7 +46,6 @@ typedef struct {
     bool          gestureModeOn;
     unsigned long savedClock;
     fsm_state     state;
-    bool          harmonies[3];
 
     float pitch_est;
     float roll_est;
@@ -54,6 +53,7 @@ typedef struct {
     float yaw_bias_dps;
 
     unsigned long last_t_ms; 
+    bool          harmonies[3];
 
 } full_state;
 

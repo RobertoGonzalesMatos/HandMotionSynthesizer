@@ -10,6 +10,8 @@ const  float CF_ALPHA  = 0.98f;
 const  float YAW_BIAS_ALPHA = 0.002f;
 const  float CALM_GZ_DPS    = 10.0f;
 
+void computeMountTransform(float ax, float ay, float az,
+                           float &ux, float &uy, float &uz);
 void computeAccelAngles(float ux, float uy, float uz,
                         float &pitch_acc, float &roll_acc);
 

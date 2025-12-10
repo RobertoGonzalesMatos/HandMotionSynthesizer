@@ -40,6 +40,7 @@ void loop() {
     if (f > 0) {
       baseFreq = f;
       stopPlay();      // Wait for IMU to determine pitch
+      initWDT();
       continue;
     }
 
