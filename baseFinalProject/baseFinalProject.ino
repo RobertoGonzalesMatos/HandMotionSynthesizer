@@ -58,7 +58,6 @@ void loop() {
   updateHaromnyControls();
   pollIMUAndUpdatePitch();
   pollDrum(millis());
-  petWDT();
 }
 
 int keyToFreq(char c) {

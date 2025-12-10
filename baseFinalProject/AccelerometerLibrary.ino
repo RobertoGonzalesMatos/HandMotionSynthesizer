@@ -204,6 +204,7 @@ full_state updateFSM(full_state currState,
 
                 ret.savedClock = clock;
                 ret.state = s_REG_CALC;
+                petWDT();
             }
             break;
         }
@@ -235,6 +236,7 @@ full_state updateFSM(full_state currState,
                 ret.vibratoLevel = vibLevel; 
                 ret.savedClock = clock;
                 ret.state = s_REG_CALC;
+                petWDT();
             }
             break;
         }
@@ -250,6 +252,7 @@ full_state updateFSM(full_state currState,
                 Serial.println(F("t 3–4: You are in Drum Mode!"));
                 ret.gestureMode = true;
                 ret.state = s_GESTURE_WAIT;
+                petWDT();
                 break;
             }
 
@@ -267,6 +270,7 @@ full_state updateFSM(full_state currState,
 
                 ret.savedClock = clock;
                 ret.state = s_REG_WAIT;
+                petWDT();
                 break;
             }
 
@@ -282,6 +286,7 @@ full_state updateFSM(full_state currState,
 
                 ret.savedClock = clock;
                 ret.state = s_REG_WAIT;
+                petWDT();
                 break;
             }
 
@@ -292,6 +297,7 @@ full_state updateFSM(full_state currState,
                 vibApply(yRead);
                 ret.savedClock = clock;
                 ret.state = s_REG_WAIT;
+                petWDT();
                 break;
             }
 
@@ -317,6 +323,7 @@ full_state updateFSM(full_state currState,
 
                 ret.savedClock = clock;
                 ret.state = s_REG_WAIT;
+                petWDT();
                 break;
             }
 
@@ -341,7 +348,7 @@ full_state updateFSM(full_state currState,
                 Serial.println(F("t 4–3: You are in Regular Mode!"));
                 ret.gestureMode = false;
                 ret.state = s_REG_WAIT;
-                
+                petWDT();
                 break;
             }
 
@@ -355,6 +362,7 @@ full_state updateFSM(full_state currState,
                 if (ret.yaw_deg > 25) { Ride(now);   ret.state = s_GESTURE_WAIT; ret.savedClock = clock; break; }
                 if (ret.yaw_deg < -25) { Cymbal(now); ret.state = s_GESTURE_WAIT; ret.savedClock = clock; break; }
                 ret.state = s_GESTURE_WAIT;
+                petWDT();
             }
             break;
         }
@@ -374,6 +382,7 @@ full_state updateFSM(full_state currState,
                 updateYaw(gz_dps, dt, ret.yaw_bias_dps, ret.yaw_deg);
                 ret.savedClock = clock;
                 ret.state = s_GESTURE_CALC;
+                petWDT();
             }
             break;
         }
