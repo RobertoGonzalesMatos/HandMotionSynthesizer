@@ -208,40 +208,6 @@ full_state updateFSM(full_state currState,
         dt = (clock - currState.last_t_ms) / 1000.0f;
     ret.last_t_ms = clock;
 
-    if (!drumMode)
-    {
-
-        float ux, uy, uz = ax_g, ay_g, az_g;
-        float pitch_acc, roll_acc;
-        computeAccelAngles(ux, uy, uz, pitch_acc, roll_acc);
-        applyComplementaryFilter(gx_dps, gy_dps,
-                                 pitch_acc, roll_acc,
-                                 dt,
-                                 ret.pitch_est, ret.roll_est);
-        updateYaw(gz_dps, dt,
-                  ret.yaw_bias_dps,
-                  ret.yaw_deg);
-        ret.noteFrequency = computeTargetFreq(ret.pitch_est);
-
-        int vibLevel;
-        float vibRateHz;
-        computeVibratoBucket(ret.roll_est, vibLevel, vibRateHz);
-        ret.vibratoLevel = vibLevel; 
-        float yRead = vibRateHz;
-
-        float xRead = (float)ret.noteFrequency;
-        float zRead = ret.yaw_deg;
-    }
-
-    if (drumMode)
-    {
-        float gx, gy, gz;
-        computeGestureAxes(ax_g, ay_g, az_g, gx, gy, gz);
-        ret.noteFrequency = 0;    
-        ret.vibratoLevel = 0;
-        updateYaw(gz_dps, dt, ret.yaw_bias_dps, ret.yaw_deg);
-    }
-
     #ifdef TESTING // set xRead, yRead, zRead from testing inputs
     ret.noteFrequency = ax_g;
     ret.vibratoLevel = ay_g;
@@ -274,6 +240,26 @@ full_state updateFSM(full_state currState,
             if (fiveMs)
             {
                 Serial.println(F("t 2–3: reg_calc → reg_wait"));
+                float ux, uy, uz = ax_g, ay_g, az_g;
+                float pitch_acc, roll_acc;
+                computeAccelAngles(ux, uy, uz, pitch_acc, roll_acc);
+                applyComplementaryFilter(gx_dps, gy_dps,
+                                        pitch_acc, roll_acc,
+                                        dt,
+                                        ret.pitch_est, ret.roll_est);
+                updateYaw(gz_dps, dt,
+                          ret.yaw_bias_dps,
+                          ret.yaw_deg);
+                ret.noteFrequency = computeTargetFreq(ret.pitch_est);
+
+                int vibLevel;
+                float vibRateHz;
+                computeVibratoBucket(ret.roll_est, vibLevel, vibRateHz);
+                ret.vibratoLevel = vibLevel; 
+                float yRead = vibRateHz;
+
+                float xRead = (float)ret.noteFrequency;
+                float zRead = ret.yaw_deg;
                 petWDT();
                 ret.savedClock = clock;
                 ret.state = s_REG_WAIT;
@@ -411,6 +397,11 @@ full_state updateFSM(full_state currState,
             if (fiveMs)
             {
                 Serial.println(F("t 5–4: back to gesture wait"));
+                float gx, gy, gz;
+                computeGestureAxes(ax_g, ay_g, az_g, gx, gy, gz);
+                ret.noteFrequency = 0;    
+                ret.vibratoLevel = 0;
+                updateYaw(gz_dps, dt, ret.yaw_bias_dps, ret.yaw_deg);
                 petWDT();
                 ret.savedClock = clock;
                 ret.state = s_GESTURE_WAIT;
