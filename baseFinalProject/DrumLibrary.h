@@ -3,9 +3,6 @@
 
 #include <Arduino.h>
 
-// =============================
-// TYPES
-// =============================
 struct DrumEnvelope {
     float attackMs;
     float decayMs;
@@ -21,9 +18,6 @@ struct DrumState {
     DrumEnvelope env;
 };
 
-// =============
-// CONSTANTS
-// =============
 extern const int KICK_FREQ;
 extern const int SNARE_FREQ;
 extern const int TOM_FREQ;
@@ -31,7 +25,6 @@ extern const int HAT_FREQ;
 extern const int RIDE_FREQ;
 extern const int CYMBAL_FREQ;
 
-// You must declare functions here if they are used elsewhere
 void stopPlay();
 void doStopDrums();
 

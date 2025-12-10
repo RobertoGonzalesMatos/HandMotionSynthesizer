@@ -1,18 +1,5 @@
 #include "IMUHelpers.h"
-#include "SoundEngine.h"   // constants: PITCH_MIN_DEG, etc.
-
-void computeMountTransform(float ax, float ay, float az,
-                           float &ux, float &uy, float &uz)
-{
-    // Your existing mounting transform:
-    // ux = ...
-    // uy = ...
-    // uz = ...
-    // For now assume identity:
-    ux = ax;
-    uy = ay;
-    uz = az;
-}
+#include "SoundEngine.h"
 
 void computeAccelAngles(float ux, float uy, float uz,
                         float &pitch_acc, float &roll_acc)
@@ -82,7 +69,6 @@ void computeVibratoBucket(float roll_est,
 void computeGestureAxes(float ax, float ay, float az,
                         float &gx, float &gy, float &gz)
 {
-    // simplest: scaled accelerations
     gx = ax * 100.0f;
     gy = ay * 100.0f;
     gz = az * 100.0f;

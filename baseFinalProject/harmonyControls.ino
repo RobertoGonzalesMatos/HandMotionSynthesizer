@@ -67,7 +67,6 @@ void updateHaromnyControls() {
     FS.harmonies[2] = 0;
   }
 
-  // update the ports correspondingly and play note if they changed
   if (prevHarmonies[0] != FS.harmonies[0]) {
     if (FS.harmonies[0]) {
       R_PFS->PORT[OUT_PORT1].PIN[OUT_PIN1].PmnPFS_b.PDR = 1;
@@ -96,7 +95,6 @@ void updateHaromnyControls() {
     playNote(FS.noteFrequency);
   }
 
-  // set previous harmonies
   prevHarmonies[0] = FS.harmonies[0];
   prevHarmonies[1] = FS.harmonies[1];
   prevHarmonies[2] = FS.harmonies[2];
@@ -108,9 +106,9 @@ void harmonyInit() {
   capSensors[0] = 9;
   capSensors[1] = 8;
   capSensors[2] = 7;
-  thresholds[0] = 700; //700
-  thresholds[1] = 800; //700
-  thresholds[2] = 700; //700
+  thresholds[0] = 700; 
+  thresholds[1] = 800; 
+  thresholds[2] = 700;
   // testCalibration();
 }
 

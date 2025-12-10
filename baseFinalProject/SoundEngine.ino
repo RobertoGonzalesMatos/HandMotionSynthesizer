@@ -3,22 +3,18 @@
 
 #include <Arduino.h>
 
-/*********************************************************
- *                   CONSTANTS
- *********************************************************/
-
 const int CLOCKFREQ      = 3000000;
 
 // GPT interrupt vectors
 const unsigned int TIMER_INT     = 15;    // GPT2 live note
-const unsigned int PLAYBACK_INT  = 31;    // GPT7 playback
-const unsigned int PLAYBACK_INT2 = 25;    // GPT6 playback
+const unsigned int PLAYBACK_INT  = 31;    // GPT7 playback oscilate note
+const unsigned int PLAYBACK_INT2 = 25;    // GPT6 playback change notes
 const unsigned int HARMONY_INT   = 27;
 const unsigned int HARMONY_INT2  = 26;
 const unsigned int HARMONY_INT3  = 28;
 const unsigned int NOTE_INT      = 29;
 
-// OUTPUT pins
+
 const int OUT_PORT = 1;
 const int OUT_PORT1 = 4;
 const int OUT_PORT2 = 1;
@@ -40,9 +36,6 @@ bool  playbackActive = false;
 bool drumMode = false;
 int baseFreq = 0;
 
-/*********************************************************
- *                   PROTOTYPES
- *********************************************************/
 void gptISR();
 void playbackISR();
 void gptISRHarmony();
@@ -50,39 +43,16 @@ void gptISRHarmony2();
 void gptISRHarmony3();
 void noteISR();
 
-/*********************************************************
- *                  KEY → FREQ MAP
- *********************************************************/
-int keyToFreq(char c) {
-    switch (c) {
-        case 'C': return 262;
-        case 'D': return 294;
-        case 'E': return 330;
-        case 'F': return 349;
-        case 'G': return 392;
-        case 'A': return 440;
-        case 'B': return 494;
-        case '#': return 0;
-    }
-    return 0;
-}
-
-/*********************************************************
- *               GPT INITIALIZATION
- *********************************************************/
 void initNoteGPT();
 
 void initGPT() {
     Serial.println(F("initGPT()"));
 
-    // Enable GPT clocks
     R_MSTP->MSTPCRD_b.MSTPD6 = 0; // GPT2, GPT6
     R_MSTP->MSTPCRD_b.MSTPD5 = 0; // GPT4, GPT5
-    R_MSTP->MSTPCRD_b.MSTPD0 = 0; // GPT7 playback
+    R_MSTP->MSTPCRD_b.MSTPD0 = 0; // GPT7
 
-    /***********************
-     *   GPT2 = LIVE NOTE
-     ***********************/
+    //GPT2
     R_GPT2->GTCR_b.CST = 0;
     R_GPT2->GTSSR = (1 << R_GPT0_GTSSR_CSTRT_Pos);
     R_GPT2->GTPSR = (1 << R_GPT0_GTPSR_CSTOP_Pos);
@@ -93,30 +63,14 @@ void initGPT() {
     NVIC_EnableIRQ((IRQn_Type)TIMER_INT);
     R_ICU->IELSR[TIMER_INT] = (0x06d << R_ICU_IELSR_IELS_Pos);
 
-    // Live output pin
     R_PFS->PORT[OUT_PORT].PIN[OUT_PIN].PmnPFS_b.PMR = 0;
     R_PFS->PORT[OUT_PORT].PIN[OUT_PIN].PmnPFS_b.PDR = 1;
-
-
-    /************************
-     *   GPT7 = PLAYBACK
-     ************************/
-    // R_GPT7->GTCR_b.CST = 0;
-    // R_GPT7->GTSSR = (1 << R_GPT0_GTSSR_CSTRT_Pos);
-    // R_GPT7->GTPSR = (1 << R_GPT0_GTPSR_CSTOP_Pos);
-    // R_GPT7->GTCR  = 0b010 << 24;
-    // NVIC_SetVector((IRQn_Type)PLAYBACK_INT, (uint32_t)&playbackISR);
-    // NVIC_SetPriority((IRQn_Type)PLAYBACK_INT, 10);
-    // NVIC_EnableIRQ((IRQn_Type)PLAYBACK_INT);
-    // R_ICU->IELSR[PLAYBACK_INT] = (0x095 << R_ICU_IELSR_IELS_Pos);
 
     R_PFS->PORT[OUT_PORT_PLAYBACK].PIN[OUT_PIN_PLAYBACK].PmnPFS_b.PMR = 0;
     R_PFS->PORT[OUT_PORT_PLAYBACK].PIN[OUT_PIN_PLAYBACK].PmnPFS_b.PDR = 1;
 
 
-    /***********************
-     *   HARMONY (unchanged)
-     ***********************/
+    //Harmonies
     R_GPT4->GTCR_b.CST = 0;
     R_GPT4->GTSSR = (1 << R_GPT0_GTSSR_CSTRT_Pos);
     R_GPT4->GTPSR = (1 << R_GPT0_GTPSR_CSTOP_Pos);
@@ -151,17 +105,11 @@ void initGPT() {
     NVIC_SetVector((IRQn_Type)HARMONY_INT3, (uint32_t)&gptISRHarmony3);
     NVIC_EnableIRQ((IRQn_Type)HARMONY_INT3);
 
-
-    /***********************
-     *   VIBRATO
-     ***********************/
     initNoteGPT();
     initPlayBackGPT();
 }
 
-/*********************************************************
- *             LIVE NOTE (GPT2)
- *********************************************************/
+//Live play
 void playNote(int freq) {
     playing = true;
   R_GPT2->GTCR_b.CST = 0;
@@ -220,9 +168,7 @@ void stopPlay() {
     R_PFS->PORT[OUT_PORT].PIN[OUT_PIN].PmnPFS_b.PODR = 0;
 }
 
-/*********************************************************
- *                 LIVE ISR (GPT2)
- *********************************************************/
+
 void gptISR() {
     if (liveActive)
         R_PFS->PORT[OUT_PORT].PIN[OUT_PIN].PmnPFS_b.PODR ^= 1;
@@ -231,13 +177,11 @@ void gptISR() {
     R_ICU->IELSR_b[TIMER_INT].IR = 0;
 }
 
-/*********************************************************
- *             PLAYBACK (GPT7)
- *********************************************************/
+//Playback
 void playbackSetFreq(int freq) {
     if (freq <= 0) {
         playbackActive = false;
-        R_GPT7->GTCR_b.CST = 0;    // stop waveform output
+        R_GPT7->GTCR_b.CST = 0;  
         return;
     }
 
@@ -263,9 +207,7 @@ void playbackISR() {
     R_ICU->IELSR_b[PLAYBACK_INT].IR = 0;
 }
 
-/*********************************************************
- *                      HARMONY ISR
- *********************************************************/
+//Harmonies
 void gptISRHarmony() {
     R_PFS->PORT[OUT_PORT1].PIN[OUT_PIN1].PmnPFS_b.PODR ^= 1;
     R_ICU->IELSR_b[HARMONY_INT].IR = 0;
@@ -281,9 +223,7 @@ void gptISRHarmony3() {
     R_ICU->IELSR_b[HARMONY_INT3].IR = 0;
 }
 
-/*********************************************************
- *                  VIBRATO (unchanged)
- *********************************************************/
+//vibrato
 const int VIB_DEPTH_HZ = 5;
 
 void initNoteGPT() {
@@ -350,9 +290,7 @@ void noteISR() {
     R_ICU->IELSR_b[NOTE_INT].IR = 0;
 }
 
-/*********************************************************
- *      RECORDING + PLAYBACK LOGIC (unchanged)
- *********************************************************/
+//recording + playback
 struct NoteEvent {
     int freq;
     unsigned long duration;
@@ -416,39 +354,22 @@ void recordSample(int f) {
     }
 }
 void startPlayback() {
-        debugPrintRecording();
+    debugPrintRecording();
     playbackRunning = true;
     playIndex = 0;
     playbackLastFreq = -1;
     recActive = false;
 
-    /*************************************************
-     *  CONFIGURE GPT6 EXACTLY LIKE GPT3 IN WORKING CODE
-     *************************************************/
     R_GPT6->GTCR_b.CST = 0;
-
-    // Only start/stop by software (same as GPT3)
     R_GPT6->GTSSR = (1 << R_GPT0_GTSSR_CSTRT_Pos);
     R_GPT6->GTPSR = (1 << R_GPT0_GTPSR_CSTOP_Pos);
-
-    // SAME PRESCALER AS WORKING SYSTEM (GPT3 used 0b101)
     R_GPT6->GTCR = (0b101 << 24);
-
-    // Map GPT6 interrupt to the NOTE_INT3 vector
     R_ICU->IELSR[PLAYBACK_INT2] = (0x08d << R_ICU_IELSR_IELS_Pos);
-
-    // Install ISR
     NVIC_SetVector((IRQn_Type)PLAYBACK_INT2, (uint32_t)&gptPlaybackDurationISR);
     NVIC_SetPriority((IRQn_Type)PLAYBACK_INT2, 14);
     NVIC_EnableIRQ((IRQn_Type)PLAYBACK_INT2);
-
-    // Reset compare value (just like GPT3 version)
     R_GPT6->GTPR = 0;
-
-    // START TIMER
     R_GPT6->GTCR_b.CST = 1;
-
-    // Start first playback frequency
     NoteEvent &ev = recBuf[0];
     playbackLastFreq = -1;
     playbackSetFreq(ev.freq);
@@ -457,11 +378,10 @@ void startPlayback() {
 
 
 void gpt6StartDuration(unsigned long ms) {
-    // match GPT3 logic: 46875 ticks per ms at this prescaler
-        uint32_t ticks = (uint32_t)((46875.0 * ms) / 1000.0);
+    uint32_t ticks = (uint32_t)((46875.0 * ms) / 1000.0);
 
     if (ticks == 0) {
-        ticks = 1;  // avoid 0 -> no interrupt
+        ticks = 1; 
     }
 
     R_GPT6->GTCR_b.CST = 0;
@@ -470,10 +390,7 @@ void gpt6StartDuration(unsigned long ms) {
     R_GPT6->GTCR_b.CST = 1;
 }
 void gptPlaybackDurationISR() {
-    // STOP timer (same as GPT3 ISR)
     R_GPT6->GTCR_b.CST = 0;
-
-    // CLEAR interrupt
     R_ICU->IELSR_b[PLAYBACK_INT2].IR = 0;
 
     playIndex++;
@@ -488,31 +405,18 @@ void gptPlaybackDurationISR() {
     playbackSetFreq(ev.freq);
 
     gpt6StartDuration(ev.duration);
-
-    // RESTART timer
     R_GPT6->GTCR_b.CST = 1;
 }
-
-
 
 void stopPlayback() {
     playbackRunning = false;
     playbackActive = false;
 
     R_GPT7->GTCR_b.CST = 0;
-    // R_GPT6->GTCR_b.CST = 0;
-
-    // Restore Harmony3 ISR
-    // NVIC_SetVector((IRQn_Type)HARMONY_INT3, (uint32_t)&gptISRHarmony3);
-    // NVIC_EnableIRQ((IRQn_Type)HARMONY_INT3);
-
-    // FS.harmonies[2] = true;
 
     R_PFS->PORT[OUT_PORT_PLAYBACK]
         .PIN[OUT_PIN_PLAYBACK].PmnPFS_b.PODR = 0;
 }
-
-
 
 bool isPlayingBack() {
     return playbackRunning;
@@ -538,4 +442,4 @@ void debugPrintRecording() {
 
     Serial.println(F("===== END OF RECORDING =====\n"));
 }
-#endif // SOUND_ENGINE_H
+#endif

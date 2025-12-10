@@ -3,30 +3,23 @@
 
 static DrumState drum = { false, 0, 0, { 0, 0, 0, 0, 0 } };
 
-// =====================================================
-// ADSR Definitions
-// =====================================================
 static const DrumEnvelope KICK_ENV = { 3, 60, 20, 30, 0.2f };
 static const DrumEnvelope SNARE_ENV = { 5, 40, 30, 70, 0.3f };
 static const DrumEnvelope TOM_ENV = { 4.0f, 40.0f, 40.0f, 80.0f, 0.4f };
 static const DrumEnvelope HAT_ENV = { 1, 5, 10, 30, 0.2f };
 static const DrumEnvelope RIDE_ENV = { 3.0f, 50.0f, 120.0f, 125.0f, 0.3f };
 static const DrumEnvelope CYMBAL_ENV = { 2.0f, 60.0f, 150.0f, 150.0f, 0.4f };
-// =====================================================
-// DRUM FREQUENCY DEFINITIONS (Actual Values)
-// =====================================================
-const int KICK_FREQ   = 60;   // low thump
-const int SNARE_FREQ  = 100;  // snappy
+
+const int KICK_FREQ   = 60;  
+const int SNARE_FREQ  = 100;  
 const int TOM_FREQ    = 130;
-const int HAT_FREQ    = 6000; // white noise emulated by high freq
+const int HAT_FREQ    = 6000;
 const int RIDE_FREQ   = 350;  
 const int CYMBAL_FREQ = 7000;
 static unsigned long lastHitMs = 0;
 static const unsigned long HIT_COOLDOWN_MS = 300;
 
-// =====================================================
-// Envelope evaluation
-// =====================================================
+
 static float evalEnvelope(const DrumEnvelope &env, float tMs) {
   float A = env.attackMs;
   float D = env.decayMs;
@@ -36,14 +29,12 @@ static float evalEnvelope(const DrumEnvelope &env, float tMs) {
 
   if (tMs < 0.0f) tMs = 0.0f;
 
-  // Attack 0 → 1
   if (tMs < A) {
     if (A <= 0.0f) return 1.0f;
     return tMs / A;
   }
   tMs -= A;
 
-  // Decay 1 → sustainLevel
   if (tMs < D) {
     if (D <= 0.0f) return sL;
     float x = tMs / D;
@@ -51,13 +42,11 @@ static float evalEnvelope(const DrumEnvelope &env, float tMs) {
   }
   tMs -= D;
 
-  // Sustain
   if (tMs < S) {
     return sL;
   }
   tMs -= S;
 
-  // Release sustainLevel → 0
   if (tMs < R) {
     if (R <= 0.0f) return 0.0f;
     float x = tMs / R;
@@ -80,46 +69,28 @@ void setDrumLevel(float level) {
 
 
 void doStopDrums() {
-    // Stop the PWM / GPT audio output
     stopPlay();
-
-    // Hard mute output
     setDrumLevel(0.0f);
-
-    // Mark drum inactive
     drum.active = false;
 }
 
 
-// =====================================================
-// Start drum hit
-// =====================================================
 static inline void playDrumADSR(int freq, const DrumEnvelope &env, unsigned long now) {
-  if (now - lastHitMs < HIT_COOLDOWN_MS) {
-    return;  // too soon, ignore retrigger
-}
-lastHitMs = now;
-
-    // Stop previous drum voice
+    if (now - lastHitMs < HIT_COOLDOWN_MS) {
+      return;
+    }
+    lastHitMs = now;
     doStopDrums();
-
-    // Start PWM on GPT2 at the drum frequency
     playNote(freq);  
 
-    // Initialize envelope state
     drum.active  = true;
     drum.freq    = freq;
     drum.startMs = now;
     drum.env     = env;
 
-    // Start at 0 level
     setDrumLevel(0.0f);
 }
 
-
-// =====================================================
-// Poll function — call every loop()
-// =====================================================
 static inline void pollDrum(unsigned long now) {
     if (!drum.active) return;
 
@@ -135,22 +106,21 @@ static inline void pollDrum(unsigned long now) {
 
     setDrumLevel(level);
 }
+
 void setDrumFrequency(int freq) {
     if (freq <= 0) return;
 
-    uint32_t clk = 3000000;    // GPT2 clock (3 MHz for R4 Uno typically)
+    uint32_t clk = 3000000;    
     uint32_t period = clk / freq;
 
-    if (period < 100)  period = 100;   // limit for high freqs
-    if (period > 65000) period = 65000; // limit for low freqs
+    if (period < 100)  period = 100;   
+    if (period > 65000) period = 65000;
 
     R_GPT2->GTPR = period;
     R_GPT2->GTCCR[0] = 0;
 }
 
-// =====================================================
-// Gesture trigger functions
-// =====================================================
+
 #ifndef TESTING
 static inline void Kick(unsigned long now) {
   Serial.println(F("[DRUM] Kick"));
