@@ -164,12 +164,6 @@ full_state updateFSM(full_state currState,
         dt = (clock - currState.last_t_ms) / 1000.0f;
     ret.last_t_ms = clock;
 
-    #ifdef TESTING // set xRead, yRead, zRead from testing inputs
-    ret.noteFrequency = ax_g;
-    ret.vibratoLevel = ay_g;
-    ret.yaw_deg = az_g;
-    #endif
-
     if(!drumMode){
         float ux, uy, uz;
         computeMountTransform(ax_g, ay_g, az_g, ux, uy, uz);
@@ -179,7 +173,6 @@ full_state updateFSM(full_state currState,
                                 pitch_acc, roll_acc,
                                 dt,
                                 ret.pitch_est, ret.roll_est);
-        Serial.print(ux);
         updateYaw(gz_dps, dt,
                   ret.yaw_bias_dps,
                   ret.yaw_deg);
@@ -194,6 +187,12 @@ full_state updateFSM(full_state currState,
         float xRead = (float)ret.noteFrequency;
         float zRead = ret.yaw_deg;
     }
+
+    #ifdef TESTING // set xRead, yRead, zRead from testing inputs
+    ret.noteFrequency = ax_g;
+    ret.vibratoLevel = ay_g;
+    ret.yaw_deg = az_g;
+    #endif
 
     switch (currState.state)
     {
@@ -221,7 +220,6 @@ full_state updateFSM(full_state currState,
             if (fiveMs)
             {
                 Serial.println(F("t 2–3: reg_calc → reg_wait"));
-                petWDT();
                 ret.savedClock = clock;
                 ret.state = s_REG_WAIT;
             }
@@ -363,7 +361,6 @@ full_state updateFSM(full_state currState,
                 ret.noteFrequency = 0;    
                 ret.vibratoLevel = 0;
                 updateYaw(gz_dps, dt, ret.yaw_bias_dps, ret.yaw_deg);
-                petWDT();
                 ret.savedClock = clock;
                 ret.state = s_GESTURE_WAIT;
             }

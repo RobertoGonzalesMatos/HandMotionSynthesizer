@@ -13,6 +13,10 @@ void setup() {
   Serial.begin(9600);
   while (!Serial) {}
 
+  Serial.println("SETUP");
+  // testAll();
+  // while(true);
+
   initGPT();
   mpuInit();    
   harmonyInit();
@@ -41,6 +45,7 @@ void loop() {
       baseFreq = f;
       stopPlay();      // Wait for IMU to determine pitch
       initWDT();
+      petWDT();
       continue;
     }
 
@@ -53,6 +58,7 @@ void loop() {
   updateHaromnyControls();
   pollIMUAndUpdatePitch();
   pollDrum(millis());
+  petWDT();
 }
 
 int keyToFreq(char c) {

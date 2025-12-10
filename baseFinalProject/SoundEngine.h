@@ -1,5 +1,6 @@
 #ifndef SOUNDENGINE_H
 #define SOUNDENGINE_H
+// #define TESTING
 struct Voice;
 const int CLOCKFREQ      = 3000000;
 
@@ -11,6 +12,7 @@ const unsigned int HARMONY_INT   = 27;
 const unsigned int HARMONY_INT2  = 26;
 const unsigned int HARMONY_INT3  = 28;
 const unsigned int NOTE_INT      = 29;     //vibrato
+const unsigned int WDT_INT       = 30;
 
 
 const int OUT_PORT = 1;
@@ -73,6 +75,5 @@ bool playing;
 
 char* mockFunc;
 
-const unsigned int WDT_INT = 30;
 void petWDT();
 #endif

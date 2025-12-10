@@ -43,7 +43,6 @@ bool testTransition(full_state start,
 drumMode = inputs.drumModeOn;
  if (inputs.pressDrumButton) drumMode = !drumMode;
 
-
  full_state res = updateFSM(start, inputs.xRead, inputs.yRead, inputs.zRead, 0, 0, 0, inputs.clock);
 
  bool passedTest =  (((!drumMode && res.noteFrequency == end.noteFrequency) || drumMode) &&
@@ -168,6 +167,8 @@ char* testLastFunc[numTests] = {"", "", "", "", "", "doStop()",
 
 
 bool testAll() {
+  Serial.println("RESTARTING TESTALL");
+  if (!multiStateTests()) return false;
  for (int i = 0; i < numTests; i++) {
    Serial.print("Running test ");
    Serial.print(i + 1);
@@ -179,7 +180,7 @@ bool testAll() {
    }
    Serial.println();
  }
- if (!multiStateTests()) return false;
+//  if (!multiStateTests()) return false;
  Serial.println("All tests passed!");
  return true;
 }

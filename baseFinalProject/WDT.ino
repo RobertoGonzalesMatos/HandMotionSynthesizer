@@ -1,7 +1,7 @@
 #include <Arduino.h>
 
 void initWDT() {
-  R_WDT->WDTCR_b.CKS = 1000;
+  R_WDT->WDTCR_b.CKS = 2000;
   R_WDT->WDTCR_b.TOPS = 10;
   R_WDT->WDTCR_b.RPSS = 11;
   R_WDT->WDTCR_b.RPES = 11;
