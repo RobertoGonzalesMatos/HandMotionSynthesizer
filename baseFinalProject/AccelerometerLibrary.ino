@@ -12,7 +12,6 @@ extern void setVibrato(float vibRateHz);
 extern int  curFreq;
 extern bool drumMode;
 
-
 static int lastAnnouncedHz = -1;
 
 static const uint8_t MPU_ADDR    = 0x68;
@@ -29,30 +28,17 @@ static uint8_t   last_i2c_err = 0;
 unsigned long    lastIMUms    = 0;
 const unsigned long IMU_DT_MS = 10; 
 
-const float PITCH_MIN_DEG = -60.0f;
-const float PITCH_MAX_DEG =  60.0f;
-const float TILT_RANGE_SEMITONES = 24.0f;
-
-static int   lastVibLevel = -1;
 static const float vibRates[4] = {0.0f, 2.0f, 4.0f, 6.0f};
-
-const float AX_BIAS=0.0f, AY_BIAS=0.0f, AZ_BIAS=0.0f;
-const float AX_SF  =1.0f, AY_SF  =1.0f, AZ_SF  =1.0f;
 
 static float pitch_est = 0.0f;  // deg, forward/back
 static float roll_est  = 0.0f;  // deg, left/right
-const  float CF_ALPHA  = 0.98f;
 static unsigned long last_t_ms = 0;
 
 static float yaw_deg = 0.0f;
 static float yaw_bias_dps = 0.0f;
-const  float YAW_BIAS_ALPHA = 0.002f;
-const  float CALM_GZ_DPS    = 10.0f;
-
 const  float PLAY_BAND_DEG  = 25.0f;      // ± yaw window
 
 static bool  notePlaying  = false;
-static int   targetFreqHz = 0;
 
 static bool  vibActive        = false;
 static float vibCurrentRateHz = 0.0f;
@@ -140,7 +126,6 @@ void mpuInit() {
   if (who != 0x68) {
     Serial.println(F("ERROR: MPU not responding at 0x68 (check AD0, wiring, power)."));
   }
-
   yaw_deg = 0.0f;
 }
 
@@ -167,37 +152,10 @@ bool mpuReadRaw(int16_t &ax, int16_t &ay, int16_t &az,
   return true;
 }
 
-
-static int   lastSemi = 9999;
-static float semiEdgeLow  = -1e9f;
-static float semiEdgeHigh =  1e9f;
-
-//since angles are continuous and we want to play discrete notes there are times where the progrram will flicker between two notes. 
-//to avoid this we add buffers to the current note so that when we change tho the adjacent note the edge is further away
-static inline int quantizeWithHys(float semi_cont) {
-  if (lastSemi == 9999) { 
-    lastSemi = (int)roundf(semi_cont);
-    semiEdgeLow  = lastSemi - 0.6f;   
-    semiEdgeHigh = lastSemi + 0.6f;
-  }
-  if (semi_cont < semiEdgeLow) {
-    lastSemi--;
-    semiEdgeLow  = lastSemi - 0.6f;
-    semiEdgeHigh = lastSemi + 0.6f;
-  } else if (semi_cont > semiEdgeHigh) {
-    lastSemi++;
-    semiEdgeLow  = lastSemi - 0.6f;
-    semiEdgeHigh = lastSemi + 0.6f;
-  }
-  return lastSemi;
-}
-
 full_state updateFSM(full_state currState,
                      float ax_g, float ay_g, float az_g,
                      float gx_dps, float gy_dps, float gz_dps,
-                     unsigned long clock)
-{
-  
+                     unsigned long clock) {  
     full_state ret = currState;
     bool fiveMs = (clock - currState.savedClock) >= 5;
 
@@ -412,7 +370,6 @@ full_state updateFSM(full_state currState,
 
     return ret;
 }
-
 
 void pollIMUAndUpdatePitch() {
 

@@ -1,6 +1,36 @@
 #ifndef SOUNDENGINE_H
 #define SOUNDENGINE_H
 struct Voice;
+const int CLOCKFREQ      = 3000000;
+
+// GPT interrupt vectors
+const unsigned int TIMER_INT     = 15;    // GPT2 live note
+const unsigned int PLAYBACK_INT  = 31;    // GPT7 playback oscilate note
+const unsigned int PLAYBACK_INT2 = 25;    // GPT6 playback change notes
+const unsigned int HARMONY_INT   = 27;
+const unsigned int HARMONY_INT2  = 26;
+const unsigned int HARMONY_INT3  = 28;
+const unsigned int NOTE_INT      = 29;     //vibrato
+
+
+const int OUT_PORT = 1;
+const int OUT_PORT1 = 4;
+const int OUT_PORT2 = 1;
+const int OUT_PORT3 = 3;
+const int OUT_PIN  = 6;
+const int OUT_PIN1 = 10;
+const int OUT_PIN2 = 12;
+const int OUT_PIN3 = 04;
+
+const int OUT_PORT_PLAYBACK = 4;
+const int OUT_PIN_PLAYBACK  = 11;
+
+const int VIB_DEPTH_HZ = 5;
+
+struct NoteEvent {
+    int freq;
+    unsigned long duration;
+};
 
 typedef enum {
   s_INIT = 0,
@@ -37,7 +67,6 @@ void servicePlaybackTick();
 void updateHarmonyControls();
 void harmonyInit();
 bool isRecording();         
-bool isPlayingBack();
 void recordSample(int freq);
 
 bool playing;

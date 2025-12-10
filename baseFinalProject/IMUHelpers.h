@@ -3,6 +3,13 @@
 
 #include <Arduino.h>
 
+const float PITCH_MIN_DEG = -60.0f;
+const float PITCH_MAX_DEG =  60.0f;
+const float TILT_RANGE_SEMITONES = 24.0f;
+const  float CF_ALPHA  = 0.98f;
+const  float YAW_BIAS_ALPHA = 0.002f;
+const  float CALM_GZ_DPS    = 10.0f;
+
 void computeAccelAngles(float ux, float uy, float uz,
                         float &pitch_acc, float &roll_acc);
 

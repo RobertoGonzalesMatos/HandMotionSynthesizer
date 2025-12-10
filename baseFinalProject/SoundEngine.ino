@@ -3,31 +3,6 @@
 
 #include <Arduino.h>
 
-const int CLOCKFREQ      = 3000000;
-
-// GPT interrupt vectors
-const unsigned int TIMER_INT     = 15;    // GPT2 live note
-const unsigned int PLAYBACK_INT  = 31;    // GPT7 playback oscilate note
-const unsigned int PLAYBACK_INT2 = 25;    // GPT6 playback change notes
-const unsigned int HARMONY_INT   = 27;
-const unsigned int HARMONY_INT2  = 26;
-const unsigned int HARMONY_INT3  = 28;
-const unsigned int NOTE_INT      = 29;
-
-
-const int OUT_PORT = 1;
-const int OUT_PORT1 = 4;
-const int OUT_PORT2 = 1;
-const int OUT_PORT3 = 3;
-const int OUT_PIN  = 6;
-const int OUT_PIN1 = 10;
-const int OUT_PIN2 = 12;
-const int OUT_PIN3 = 04;
-
-// Playback pin 
-const int OUT_PORT_PLAYBACK = 4;
-const int OUT_PIN_PLAYBACK  = 11;
-
 int   curFreq  = 0;
 bool  liveActive = false;
 
@@ -35,15 +10,6 @@ bool  playbackActive = false;
 
 bool drumMode = false;
 int baseFreq = 0;
-
-void gptISR();
-void playbackISR();
-void gptISRHarmony();
-void gptISRHarmony2();
-void gptISRHarmony3();
-void noteISR();
-
-void initNoteGPT();
 
 void initGPT() {
     Serial.println(F("initGPT()"));
@@ -68,7 +34,6 @@ void initGPT() {
 
     R_PFS->PORT[OUT_PORT_PLAYBACK].PIN[OUT_PIN_PLAYBACK].PmnPFS_b.PMR = 0;
     R_PFS->PORT[OUT_PORT_PLAYBACK].PIN[OUT_PIN_PLAYBACK].PmnPFS_b.PDR = 1;
-
 
     //Harmonies
     R_GPT4->GTCR_b.CST = 0;
@@ -168,43 +133,12 @@ void stopPlay() {
     R_PFS->PORT[OUT_PORT].PIN[OUT_PIN].PmnPFS_b.PODR = 0;
 }
 
-
 void gptISR() {
     if (liveActive)
         R_PFS->PORT[OUT_PORT].PIN[OUT_PIN].PmnPFS_b.PODR ^= 1;
 
     R_GPT2->GTCR_b.CST = 1;
     R_ICU->IELSR_b[TIMER_INT].IR = 0;
-}
-
-//Playback
-void playbackSetFreq(int freq) {
-    if (freq <= 0) {
-        playbackActive = false;
-        R_GPT7->GTCR_b.CST = 0;  
-        return;
-    }
-
-    playbackActive = true;
-
-    uint32_t pr = CLOCKFREQ / (2 * freq);
-
-    R_GPT7->GTCR_b.CST = 0;
-    R_GPT7->GTPR = pr;
-    R_GPT7->GTCR_b.CST = 1;
-}
-
-
-void playbackISR() {
-    if (playbackActive) {
-        R_PFS->PORT[OUT_PORT_PLAYBACK]
-            .PIN[OUT_PIN_PLAYBACK]
-            .PmnPFS_b.PODR ^= 1;
-    }
-
-
-    R_GPT7->GTCR_b.CST = 1;
-    R_ICU->IELSR_b[PLAYBACK_INT].IR = 0;
 }
 
 //Harmonies
@@ -224,8 +158,6 @@ void gptISRHarmony3() {
 }
 
 //vibrato
-const int VIB_DEPTH_HZ = 5;
-
 void initNoteGPT() {
     R_GPT3->GTCR_b.CST = 0;
     R_GPT3->GTSSR = (1 << R_GPT0_GTSSR_CSTRT_Pos);
@@ -291,13 +223,8 @@ void noteISR() {
 }
 
 //recording + playback
-struct NoteEvent {
-    int freq;
-    unsigned long duration;
-};
 
 const int MAX_EVENTS = 128;
-
 NoteEvent recBuf[MAX_EVENTS];
 int recCount = 0;
 bool recActive = false;
@@ -353,6 +280,33 @@ void recordSample(int f) {
         lastChangeMs = now;
     }
 }
+
+void playbackSetFreq(int freq) {
+    if (freq <= 0) {
+        playbackActive = false;
+        R_GPT7->GTCR_b.CST = 0;  
+        return;
+    }
+
+    playbackActive = true;
+    uint32_t pr = CLOCKFREQ / (2 * freq);
+    R_GPT7->GTCR_b.CST = 0;
+    R_GPT7->GTPR = pr;
+    R_GPT7->GTCR_b.CST = 1;
+}
+
+void playbackISR() {
+    if (playbackActive) {
+        R_PFS->PORT[OUT_PORT_PLAYBACK]
+            .PIN[OUT_PIN_PLAYBACK]
+            .PmnPFS_b.PODR ^= 1;
+    }
+
+
+    R_GPT7->GTCR_b.CST = 1;
+    R_ICU->IELSR_b[PLAYBACK_INT].IR = 0;
+}
+
 void startPlayback() {
     debugPrintRecording();
     playbackRunning = true;
@@ -375,7 +329,6 @@ void startPlayback() {
     playbackSetFreq(ev.freq);
     gpt6StartDuration(ev.duration);
 }
-
 
 void gpt6StartDuration(unsigned long ms) {
     uint32_t ticks = (uint32_t)((46875.0 * ms) / 1000.0);
@@ -418,13 +371,10 @@ void stopPlayback() {
         .PIN[OUT_PIN_PLAYBACK].PmnPFS_b.PODR = 0;
 }
 
-bool isPlayingBack() {
-    return playbackRunning;
-}
-
 bool isRecording() {
     return recActive;
 }
+
 void debugPrintRecording() {
     Serial.println(F("===== RECORDED NOTE BUFFER ====="));
     Serial.print(F("Total events: "));

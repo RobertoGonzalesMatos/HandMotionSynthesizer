@@ -30,6 +30,30 @@ void updateYaw(float gz_dps, float dt,
     yaw_deg += (gz_dps - yaw_bias_dps) * dt;
 }
 
+static int   lastSemi = 9999;
+static float semiEdgeLow  = -1e9f;
+static float semiEdgeHigh =  1e9f;
+
+//since angles are continuous and we want to play discrete notes there are times where the progrram will flicker between two notes. 
+//to avoid this we add buffers to the current note so that when we change tho the adjacent note the edge is further away
+static inline int quantizeWithHys(float semi_cont) {
+  if (lastSemi == 9999) { 
+    lastSemi = (int)roundf(semi_cont);
+    semiEdgeLow  = lastSemi - 0.6f;   
+    semiEdgeHigh = lastSemi + 0.6f;
+  }
+  if (semi_cont < semiEdgeLow) {
+    lastSemi--;
+    semiEdgeLow  = lastSemi - 0.6f;
+    semiEdgeHigh = lastSemi + 0.6f;
+  } else if (semi_cont > semiEdgeHigh) {
+    lastSemi++;
+    semiEdgeLow  = lastSemi - 0.6f;
+    semiEdgeHigh = lastSemi + 0.6f;
+  }
+  return lastSemi;
+}
+
 int computeTargetFreq(float pitch_est)
 {
     if (baseFreq <= 0)
