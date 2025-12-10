@@ -11,7 +11,7 @@ const state_enums = {
 } 
 
 //define initial FSM state and inputs
-const fsm_state = {noteFrequency: 0, vibratoLevel: 0, gestureModeOn : false, savedClock : 0, state: state_enums.s_INIT, harmonies: [false,false,false], wasRecording: false};
+const fsm_state = {noteFrequency: 0, vibratoLevel: 0, gestureMode : false, savedClock : 0, state: state_enums.s_INIT, harmonies: [false,false,false], wasRecording: false};
 const inputs = { x: 0, y: 0, z: 0, drumMode: false, clock: 0, isRecording: false};
 
 // Mock FSM update function
@@ -60,14 +60,14 @@ function mockUpdateFSM(currState, inputs) {
       ret.wasRecording = inputs.isRecording;
       // Check for drum mode activation
       if (inputs.drumMode) {
-        ret.gestureModeOn = true;
+        ret.gestureMode = true;
         ret.state = state_enums.s_GESTURE_WAIT;
       } 
       break;
     case state_enums.s_GESTURE_WAIT:
       // Check for drum mode deactivation
       if (!inputs.drumMode) {
-        ret.gestureModeOn = false;
+        ret.gestureMode = false;
         ret.state = state_enums.s_REG_WAIT
       }
     default:
@@ -194,7 +194,7 @@ test.describe("Arduino-UI Integration", () => {
        { ...inputs, drumMode: true }
      );
 
-     if (gesture.gestureModeOn) {
+     if (gesture.gestureMode) {
       await page.evaluate(() => {
         window.drumMode = true;
       });
@@ -208,7 +208,7 @@ test.describe("Arduino-UI Integration", () => {
        { ...inputs, drumMode: false }
      );
 
-     if (!regular.gestureModeOn) {
+     if (!regular.gestureMode) {
        await page.evaluate(() => {
          window.drumMode = false;
        });

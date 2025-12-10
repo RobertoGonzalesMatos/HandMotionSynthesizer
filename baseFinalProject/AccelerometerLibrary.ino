@@ -164,7 +164,7 @@ full_state updateFSM(full_state currState,
         dt = (clock - currState.last_t_ms) / 1000.0f;
     ret.last_t_ms = clock;
 
-    if(!drumMode){
+    if(!currState.gestureMode){
         float ux, uy, uz;
         computeMountTransform(ax_g, ay_g, az_g, ux, uy, uz);
         float pitch_acc, roll_acc;
@@ -215,25 +215,25 @@ full_state updateFSM(full_state currState,
             break;
         }
 
-        case s_REG_CALC:
+        case s_REG_WAIT:
         {
             if (fiveMs)
             {
                 Serial.println(F("t 2–3: reg_calc → reg_wait"));
                 ret.savedClock = clock;
-                ret.state = s_REG_WAIT;
+                ret.state = s_REG_CALC;
             }
             break;
         }
 
-        case s_REG_WAIT:
+        case s_REG_CALC:
         {
             float xRead = (float)ret.noteFrequency;
             float zRead = ret.yaw_deg;
             float yRead = vibRates[ret.vibratoLevel];
 
             //silence
-            if (fiveMs && !drumMode &&
+            if (fiveMs && !currState.gestureMode &&
                 (fabsf(zRead) > PLAY_BAND_DEG))
             {
                 Serial.println(F("t 3–2a: stop() (yaw out-of-band or no freq)"));
@@ -245,12 +245,12 @@ full_state updateFSM(full_state currState,
                 doStop();
 
                 ret.savedClock = clock;
-                ret.state = s_REG_CALC;
+                ret.state = s_REG_WAIT;
                 break;
             }
 
             //unsilence
-            if (fiveMs && !drumMode && !notePlaying &&
+            if (fiveMs && !currState.gestureMode && !notePlaying &&
                 xRead > 0.0f && fabsf(zRead) <= PLAY_BAND_DEG)
             {
                 Serial.println(F("t 3–2: start note (was silent)"));
@@ -260,22 +260,22 @@ full_state updateFSM(full_state currState,
                 notePlaying = true;
 
                 ret.savedClock = clock;
-                ret.state = s_REG_CALC;
+                ret.state = s_REG_WAIT;
                 break;
             }
 
             // vibrato
-            if (fiveMs && !drumMode && notePlaying && yRead > 0.0f)
+            if (fiveMs && !currState.gestureMode && notePlaying && yRead > 0.0f)
             {
                 Serial.println(F("t 3–2b: vibrato()"));
                 vibApply(yRead);
                 ret.savedClock = clock;
-                ret.state = s_REG_CALC;
+                ret.state = s_REG_WAIT;
                 break;
             }
 
             // play note
-            if (fiveMs && !drumMode &&
+            if (fiveMs && !currState.gestureMode &&
                 fabsf(ret.noteFrequency - currState.noteFrequency) > 1.0f)
             {
                 Serial.println(F("t 3–2c: playNote(retune)"));
@@ -294,29 +294,29 @@ full_state updateFSM(full_state currState,
                 }
 
                 ret.savedClock = clock;
-                ret.state = s_REG_CALC;
+                ret.state = s_REG_WAIT;
                 break;
             }
 
-            if (fiveMs && !drumMode && notePlaying &&
+            if (fiveMs && !currState.gestureMode && notePlaying &&
                 xRead > 0.0f && fabsf(zRead) <= PLAY_BAND_DEG) {
               Serial.println(F("t 3–2c: stay on same note"));
               ret.savedClock = clock;
-              ret.state = s_REG_CALC;
+              ret.state = s_REG_WAIT;
               break;
             }
 
-            if (drumMode && !currState.gestureModeOn)
+            if (currState.gestureMode)
             {
                 Serial.println(F("t 3–4: You are in Drum Mode!"));
-                ret.gestureModeOn = true;
-                ret.state = s_GESTURE_WAIT;
+                ret.gestureMode = true;
+                ret.state = s_GESTURE_CALC;
                 break;
             }
             break;
         }
 
-        case s_GESTURE_WAIT:
+        case s_GESTURE_CALC:
         {
             #ifndef TESTING // actual rotation values
             float gx, gy, gz;
@@ -328,30 +328,30 @@ full_state updateFSM(full_state currState,
             #endif
 
             // Back to regular mode
-            if (!drumMode)
+            if (!currState.gestureMode)
             {
                 Serial.println(F("t 4–3: You are in Regular Mode!"));
-                ret.gestureModeOn = false;
-                ret.state = s_REG_WAIT;
+                ret.gestureMode = false;
+                ret.state = s_REG_CALC;
                 
                 break;
             }
 
-            if (fiveMs && drumMode)
+            if (fiveMs && currState.gestureMode)
             {
               unsigned long now = clock;
-                if (gx < -25.0f) { Kick(now);   ret.state = s_GESTURE_CALC; ret.savedClock = clock; break; }
-                if (gx >  25.0f) { Snare(now);  ret.state = s_GESTURE_CALC; ret.savedClock = clock; break; }
-                if (gy >  25.0f) {  Tom(now);    ret.state = s_GESTURE_CALC; ret.savedClock = clock; break; }
-                if (gy < -25.0f) { Hat(now);    ret.state = s_GESTURE_CALC; ret.savedClock = clock; break; }
-                if (ret.yaw_deg > 25) { Ride(now);   ret.state = s_GESTURE_CALC; ret.savedClock = clock; break; }
-                if (ret.yaw_deg < -25) { Cymbal(now); ret.state = s_GESTURE_CALC; ret.savedClock = clock; break; }
-                ret.state = s_GESTURE_CALC;
+                if (gx < -25.0f) { Kick(now);   ret.state = s_GESTURE_WAIT; ret.savedClock = clock; break; }
+                if (gx >  25.0f) { Snare(now);  ret.state = s_GESTURE_WAIT; ret.savedClock = clock; break; }
+                if (gy >  25.0f) {  Tom(now);    ret.state = s_GESTURE_WAIT; ret.savedClock = clock; break; }
+                if (gy < -25.0f) { Hat(now);    ret.state = s_GESTURE_WAIT; ret.savedClock = clock; break; }
+                if (ret.yaw_deg > 25) { Ride(now);   ret.state = s_GESTURE_WAIT; ret.savedClock = clock; break; }
+                if (ret.yaw_deg < -25) { Cymbal(now); ret.state = s_GESTURE_WAIT; ret.savedClock = clock; break; }
+                ret.state = s_GESTURE_WAIT;
             }
             break;
         }
 
-        case s_GESTURE_CALC:
+        case s_GESTURE_WAIT:
         {
             if (fiveMs)
             {
@@ -362,7 +362,7 @@ full_state updateFSM(full_state currState,
                 ret.vibratoLevel = 0;
                 updateYaw(gz_dps, dt, ret.yaw_bias_dps, ret.yaw_deg);
                 ret.savedClock = clock;
-                ret.state = s_GESTURE_WAIT;
+                ret.state = s_GESTURE_CALC;
             }
             break;
         }
@@ -389,6 +389,8 @@ void pollIMUAndUpdatePitch() {
     float gx_dps = (float)gxr / 131.0f;
     float gy_dps = (float)gyr / 131.0f;
     float gz_dps = (float)gzr / 131.0f;
+
+    FS.gestureMode = drumMode;
 
     FS = updateFSM(FS, ax_g, ay_g, az_g,
                        gx_dps, gy_dps, gz_dps,

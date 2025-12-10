@@ -47,7 +47,7 @@ drumMode = inputs.drumModeOn;
 
  bool passedTest =  (((!drumMode && res.noteFrequency == end.noteFrequency) || drumMode) &&
                       ((!drumMode && res.vibratoLevel == end.vibratoLevel) || drumMode) &&
-                      res.gestureModeOn == end.gestureModeOn &&
+                      res.gestureMode == end.gestureMode &&
                       res.savedClock == end.savedClock &&
                       res.state == end.state);
  if (lastFunc!=mockFunc) passedTest = false;
@@ -67,13 +67,13 @@ drumMode = inputs.drumModeOn;
    Serial.println(sToPrint);
    sprintf(sToPrint, "Inputs: xRead %f | yRead %f | zRead %f | pressDrumButton %s | drumModeOn %s | clock %ld", inputs.xRead, inputs.yRead, inputs.zRead, inputs.pressDrumButton ? "true" : "false", inputs.drumModeOn ? "true" : "false", inputs.clock);
    Serial.println(sToPrint);
-   sprintf(sToPrint, "          %6s | %6s | %4s | %10s", "noteFrequency", "vibratoLevel", "gestureModeOn", "savedClock");
+   sprintf(sToPrint, "          %6s | %6s | %4s | %10s", "noteFrequency", "vibratoLevel", "gestureMode", "savedClock");
    Serial.println(sToPrint);
-   sprintf(sToPrint, "starting: %6ld | %6ld | %4ld | %10ld", start.noteFrequency, start.vibratoLevel, start.gestureModeOn, start.savedClock);
+   sprintf(sToPrint, "starting: %6ld | %6ld | %4ld | %10ld", start.noteFrequency, start.vibratoLevel, start.gestureMode, start.savedClock);
    Serial.println(sToPrint);
-   sprintf(sToPrint, "expected: %6ld | %6ld | %4ld | %10ld", end.noteFrequency, end.vibratoLevel, end.gestureModeOn, end.savedClock);
+   sprintf(sToPrint, "expected: %6ld | %6ld | %4ld | %10ld", end.noteFrequency, end.vibratoLevel, end.gestureMode, end.savedClock);
    Serial.println(sToPrint);
-   sprintf(sToPrint, "actual:   %6ld | %6ld | %4ld | %10ld", res.noteFrequency, res.vibratoLevel, res.gestureModeOn, res.savedClock);
+   sprintf(sToPrint, "actual:   %6ld | %6ld | %4ld | %10ld", res.noteFrequency, res.vibratoLevel, res.gestureMode, res.savedClock);
    Serial.println(sToPrint);
    sprintf(sToPrint, "mock func expected: %s, received: %s", lastFunc, mockFunc);
    Serial.println(sToPrint);

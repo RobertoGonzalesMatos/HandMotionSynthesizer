@@ -45,7 +45,7 @@ typedef enum {
 typedef struct {
     unsigned long noteFrequency;
     unsigned long vibratoLevel;
-    bool          gestureModeOn;
+    bool          gestureMode;
     unsigned long savedClock;
     fsm_state     state;
 
