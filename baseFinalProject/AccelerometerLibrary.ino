@@ -210,6 +210,9 @@ full_state updateFSM(full_state currState,
 
         case s_REG_WAIT:
         {
+
+            
+            
             if (fiveMs)
             {
                 Serial.println(F("t 2–3: reg_calc → reg_wait"));
@@ -241,6 +244,14 @@ full_state updateFSM(full_state currState,
             float xRead = (float)ret.noteFrequency;
             float zRead = ret.yaw_deg;
             float yRead = vibRates[ret.vibratoLevel];
+
+            if (currState.gestureMode)
+            {
+                Serial.println(F("t 3–4: You are in Drum Mode!"));
+                ret.gestureMode = true;
+                ret.state = s_GESTURE_WAIT;
+                break;
+            }
 
             //silence
             if (fiveMs && !currState.gestureMode &&
@@ -309,13 +320,7 @@ full_state updateFSM(full_state currState,
                 break;
             }
 
-            if (currState.gestureMode)
-            {
-                Serial.println(F("t 3–4: You are in Drum Mode!"));
-                ret.gestureMode = true;
-                ret.state = s_GESTURE_CALC;
-                break;
-            }
+            
             break;
         }
 
@@ -356,6 +361,9 @@ full_state updateFSM(full_state currState,
 
         case s_GESTURE_WAIT:
         {
+
+            
+
             if (fiveMs)
             {
                 Serial.println(F("t 5–4: back to gesture wait"));
