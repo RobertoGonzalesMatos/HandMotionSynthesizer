@@ -164,8 +164,17 @@ full_state updateFSM(full_state currState,
         dt = (clock - currState.last_t_ms) / 1000.0f;
     ret.last_t_ms = clock;
 
-    if(!currState.gestureMode){
-        float ux, uy, uz;
+    #ifdef TESTING // set xRead, yRead, zRead from testing inputs
+    ret.noteFrequency = ax_g;
+    ret.vibratoLevel = ay_g;
+    ret.yaw_deg = az_g;
+    #endif
+
+    switch (currState.state)
+    {
+        case s_INIT:
+        {
+                  float ux, uy, uz;
         computeMountTransform(ax_g, ay_g, az_g, ux, uy, uz);
         float pitch_acc, roll_acc;
         computeAccelAngles(ux, uy, uz, pitch_acc, roll_acc);
@@ -182,22 +191,6 @@ full_state updateFSM(full_state currState,
         float vibRateHz;
         computeVibratoBucket(ret.roll_est, vibLevel, vibRateHz);
         ret.vibratoLevel = vibLevel; 
-        float yRead = vibRateHz;
-
-        float xRead = (float)ret.noteFrequency;
-        float zRead = ret.yaw_deg;
-    }
-
-    #ifdef TESTING // set xRead, yRead, zRead from testing inputs
-    ret.noteFrequency = ax_g;
-    ret.vibratoLevel = ay_g;
-    ret.yaw_deg = az_g;
-    #endif
-
-    switch (currState.state)
-    {
-        case s_INIT:
-        {
             float xRead = ret.noteFrequency;
             float zRead = ret.yaw_deg;
 
@@ -220,6 +213,23 @@ full_state updateFSM(full_state currState,
             if (fiveMs)
             {
                 Serial.println(F("t 2–3: reg_calc → reg_wait"));
+                float ux, uy, uz;
+                computeMountTransform(ax_g, ay_g, az_g, ux, uy, uz);
+                float pitch_acc, roll_acc;
+                computeAccelAngles(ux, uy, uz, pitch_acc, roll_acc);
+                applyComplementaryFilter(gx_dps, gy_dps,
+                                        pitch_acc, roll_acc,
+                                        dt,
+                                        ret.pitch_est, ret.roll_est);
+                updateYaw(gz_dps, dt,
+                          ret.yaw_bias_dps,
+                          ret.yaw_deg);
+                ret.noteFrequency = computeTargetFreq(ret.pitch_est);
+
+                int vibLevel;
+                float vibRateHz;
+                computeVibratoBucket(ret.roll_est, vibLevel, vibRateHz);
+                ret.vibratoLevel = vibLevel; 
                 ret.savedClock = clock;
                 ret.state = s_REG_CALC;
             }
@@ -276,7 +286,8 @@ full_state updateFSM(full_state currState,
 
             // play note
             if (fiveMs && !currState.gestureMode &&
-                fabsf(ret.noteFrequency - currState.noteFrequency) > 1.0f)
+                xRead > 0.0f && fabsf(zRead) <= PLAY_BAND_DEG
+                )
             {
                 Serial.println(F("t 3–2c: playNote(retune)"));
                 vibForceStop();
@@ -296,14 +307,6 @@ full_state updateFSM(full_state currState,
                 ret.savedClock = clock;
                 ret.state = s_REG_WAIT;
                 break;
-            }
-
-            if (fiveMs && !currState.gestureMode && notePlaying &&
-                xRead > 0.0f && fabsf(zRead) <= PLAY_BAND_DEG) {
-              Serial.println(F("t 3–2c: stay on same note"));
-              ret.savedClock = clock;
-              ret.state = s_REG_WAIT;
-              break;
             }
 
             if (currState.gestureMode)
@@ -332,7 +335,7 @@ full_state updateFSM(full_state currState,
             {
                 Serial.println(F("t 4–3: You are in Regular Mode!"));
                 ret.gestureMode = false;
-                ret.state = s_REG_CALC;
+                ret.state = s_REG_WAIT;
                 
                 break;
             }
