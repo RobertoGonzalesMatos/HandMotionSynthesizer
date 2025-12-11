@@ -268,7 +268,6 @@ full_state updateFSM(full_state currState,
                 if (xRead <= 0.0f)
                     Serial.println(F("t 3–2a: stop() (no freq)"));
 
-                // Serial.println("NOTE:0");
                 doStop();
 
                 ret.savedClock = clock;
@@ -298,8 +297,7 @@ full_state updateFSM(full_state currState,
             {
                 Serial.println(F("t 3–2b: vibrato()"));
                 vibApply(yRead);
-                // ret.state = s_REG_WAIT;
-                petWDT();
+                ret.state = s_REG_WAIT;
                 petWDT();
                 break;
             }
@@ -351,7 +349,6 @@ full_state updateFSM(full_state currState,
                 ret.gestureMode = false;
                 ret.state = s_REG_WAIT;
                 petWDT();
-                petWDT();
                 break;
             }
 
@@ -366,7 +363,6 @@ full_state updateFSM(full_state currState,
                 if (ret.yaw_deg > 25) { Ride(now);   ret.state = s_GESTURE_WAIT; break; }
                 if (ret.yaw_deg < -25) { Cymbal(now); ret.state = s_GESTURE_WAIT; break; }
                 ret.state = s_GESTURE_WAIT;
-                petWDT();
                 petWDT();
             }
             break;
@@ -384,7 +380,6 @@ full_state updateFSM(full_state currState,
                 ret.vibratoLevel = 0;
                 updateYaw(gz_dps, dt, ret.yaw_bias_dps, ret.yaw_deg);
                 ret.state = s_GESTURE_CALC;
-                petWDT();
                 petWDT();
             }
             break;

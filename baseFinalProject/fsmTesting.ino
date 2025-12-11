@@ -101,7 +101,7 @@ bool multiStateTests() {
     Serial.println("");
   }
 
-  // test transition 5-4-4
+  // test transition 4-5-4
   mockFunc = "";
   start = { 0, 0, 1, 100, s_GESTURE_CALC };
   // drumMode = true;
@@ -123,7 +123,7 @@ bool multiStateTests() {
     Serial.println("");
   }
 
-  // test transition 3-2-3
+  // test transition 2-3-2
   mockFunc = "";
   start = { 0, 0, 0, 100, s_REG_WAIT };
   intermediate = updateFSM(start, 100, 0, 0, 0, 0, 0, 105);
