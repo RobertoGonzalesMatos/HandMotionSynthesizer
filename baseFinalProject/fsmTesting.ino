@@ -80,7 +80,7 @@ bool testTransition(full_state start,
 bool multiStateTests() {
   char sToPrint[200];
 
-  // test transition 3-4-5
+  // test transition 3-5-4-5
   mockFunc = "";
   full_state start = { 0, 0, 1, 100, s_REG_CALC };
   full_state intermediate = updateFSM(start, 0, 0, 0, 0, 0, 0, 105);
