@@ -104,9 +104,7 @@ bool multiStateTests() {
   // test transition 4-5-4
   mockFunc = "";
   start = { 0, 0, 1, 100, s_GESTURE_CALC };
-  // drumMode = true;
   intermediate = updateFSM(start, 0, 0, 0, 0, 0, 0, 105);
-  // drumMode = false;
   end = updateFSM(intermediate, 0, 0, 0, 0, 0, 0, 110);
   if (end.state != s_GESTURE_CALC || mockFunc != "") {
     sprintf(sToPrint, "Test from %s to %s to %s FAILED", s2str(s_GESTURE_CALC), s2str(s_GESTURE_WAIT), s2str(s_GESTURE_CALC));
