@@ -50,7 +50,7 @@ void loop() {
     }
 
     if (c == 'd') {       
-      drumMode = !drumMode;
+      flipDrumMode();
       continue;
     }
 
