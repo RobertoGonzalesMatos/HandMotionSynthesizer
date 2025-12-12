@@ -1,6 +1,5 @@
 #ifndef SOUND_ENGINE_H
 #define SOUND_ENGINE_H
-// #define TESTING
 
 #include <Arduino.h>
 
