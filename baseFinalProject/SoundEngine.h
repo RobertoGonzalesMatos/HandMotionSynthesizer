@@ -29,6 +29,7 @@ const int OUT_PIN_PLAYBACK  = 11;
 
 const int VIB_DEPTH_HZ = 5;
 
+const int BTN_ADC = A1;
 struct NoteEvent {
     int freq;
     unsigned long duration;

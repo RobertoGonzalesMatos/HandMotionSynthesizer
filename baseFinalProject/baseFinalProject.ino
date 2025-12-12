@@ -16,12 +16,20 @@ void setup() {
   Serial.println("SETUP");
   testAll();
   while(true);
-
+  analogWriteResolution(12);
+  analogRead(15);
   initGPT();
   mpuInit();    
   harmonyInit();
 }
+bool adcButtonPressed() {
 
+  int v = analogRead(15);  
+  if (v>25){
+      Serial.print(v);
+  }
+  return v > 25;              
+}
 void loop() {
   while (Serial.available() > 0) {
     char c = Serial.read();
@@ -54,6 +62,10 @@ void loop() {
       continue;
     }
 
+  }
+
+  if(adcButtonPressed()){
+    flipDrumMode();
   }
   updateHaromnyControls();
   pollIMUAndUpdatePitch();
