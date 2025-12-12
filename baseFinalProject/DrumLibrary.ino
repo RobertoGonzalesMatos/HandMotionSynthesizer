@@ -3,12 +3,14 @@
 
 static DrumState drum = { false, 0, 0, { 0, 0, 0, 0, 0 } };
 
-static const DrumEnvelope KICK_ENV = { 3, 60, 20, 30, 0.2f };
-static const DrumEnvelope SNARE_ENV = { 5, 40, 30, 70, 0.3f };
-static const DrumEnvelope TOM_ENV = { 4.0f, 40.0f, 40.0f, 80.0f, 0.4f };
-static const DrumEnvelope HAT_ENV = { 1, 5, 10, 30, 0.2f };
-static const DrumEnvelope RIDE_ENV = { 3.0f, 50.0f, 120.0f, 125.0f, 0.3f };
-static const DrumEnvelope CYMBAL_ENV = { 2.0f, 60.0f, 150.0f, 150.0f, 0.4f };
+static const DrumEnvelope KICK_ENV   = { 5,  200,  1200, 1500, 0.25f };
+static const DrumEnvelope SNARE_ENV  = { 2,  150,  900,  1200, 0.20f };
+static const DrumEnvelope TOM_ENV    = { 5,  250,  1500, 1800, 0.30f };
+static const DrumEnvelope HAT_ENV    = { 0,   20,  400,  600,  0.10f };
+static const DrumEnvelope RIDE_ENV   = { 5,  300,  2500, 2500, 0.35f };
+static const DrumEnvelope CYMBAL_ENV = { 5,  600,  3500, 3000, 0.25f };
+
+
 
 const int KICK_FREQ   = 60;  
 const int SNARE_FREQ  = 100;  
@@ -17,7 +19,7 @@ const int HAT_FREQ    = 6000;
 const int RIDE_FREQ   = 350;  
 const int CYMBAL_FREQ = 7000;
 static unsigned long lastHitMs = 0;
-static const unsigned long HIT_COOLDOWN_MS = 300;
+static const unsigned long HIT_COOLDOWN_MS = 1000;
 
 
 static float evalEnvelope(const DrumEnvelope &env, float tMs) {
@@ -56,69 +58,57 @@ static float evalEnvelope(const DrumEnvelope &env, float tMs) {
   return 0.0f;
 }
 
-void setDrumLevel(float level) {
-  if (level < 0.0f) level = 0.0f;
-  if (level > 1.0f) level = 1.0f;
-
-  uint32_t period = R_GPT2->GTPR;
-  if (period == 0) return;
-
-  uint32_t duty = (uint32_t)(period * level);
-  R_GPT2->GTCCR[0] = duty; 
-}
-
 
 void doStopDrums() {
     stopPlay();
-    setDrumLevel(0.0f);
     drum.active = false;
 }
 
 
 static inline void playDrumADSR(int freq, const DrumEnvelope &env, unsigned long now) {
-    if (now - lastHitMs < HIT_COOLDOWN_MS) {
-      return;
-    }
-    lastHitMs = now;
-    doStopDrums();
-    playNote(freq);  
+  if (now - lastHitMs < HIT_COOLDOWN_MS) return;
+  lastHitMs = now;
 
-    drum.active  = true;
-    drum.freq    = freq;
-    drum.startMs = now;
-    drum.env     = env;
+  stopPlay();          // stop whatever was playing
+  playNote(freq);      // starts GPT2 square wave
 
-    setDrumLevel(0.0f);
+  drum.active  = true;
+  drum.freq    = freq;
+  drum.startMs = now;
+  drum.env     = env;
+
+  g_drumGateEnable = true;
+  g_drumLevelQ15 = 0;
+}
+
+static inline uint16_t levelToQ15(float level) {
+  if (level < 0) level = 0;
+  if (level > 1) level = 1;
+  return (uint16_t)(level * 32767.0f);
 }
 
 static inline void pollDrum(unsigned long now) {
-    if (!drum.active) return;
+  if (!drum.active) {
+    g_drumGateEnable = false;
+    g_drumLevelQ15 = 0;
+    return;
+  }
 
-    float tMs = (float)(now - drum.startMs);
-    float level = evalEnvelope(drum.env, tMs);
+  float tMs = (float)(now - drum.startMs);
+  float level = evalEnvelope(drum.env, tMs);
 
-    if (level <= 0.001f) {
-        setDrumLevel(0.0f);
-        stopPlay();
-        drum.active = false;
-        return;
-    }
+  if (level <= 0.001f) {
+    g_drumGateEnable = false;
+    g_drumLevelQ15 = 0;
+    stopPlay();
+    drum.active = false;
+    return;
+  }
 
-    setDrumLevel(level);
+  g_drumGateEnable = true;
+  g_drumLevelQ15 = levelToQ15(level);
 }
 
-void setDrumFrequency(int freq) {
-    if (freq <= 0) return;
-
-    uint32_t clk = 3000000;    
-    uint32_t period = clk / freq;
-
-    if (period < 100)  period = 100;   
-    if (period > 65000) period = 65000;
-
-    R_GPT2->GTPR = period;
-    R_GPT2->GTCCR[0] = 0;
-}
 
 
 #ifndef TESTING

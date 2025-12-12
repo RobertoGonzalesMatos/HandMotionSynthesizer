@@ -3,6 +3,9 @@
 
 #include <Arduino.h>
 
+volatile uint16_t g_drumLevelQ15 = 0; 
+volatile bool     g_drumGateEnable = false;
+
 struct DrumEnvelope {
     float attackMs;
     float decayMs;

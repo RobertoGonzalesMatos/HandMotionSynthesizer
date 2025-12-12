@@ -1,6 +1,6 @@
 #ifndef SOUND_ENGINE_H
 #define SOUND_ENGINE_H
-#define TESTING
+// #define TESTING
 
 #include <Arduino.h>
 
@@ -135,11 +135,29 @@ void stopPlay() {
 }
 
 void gptISR() {
-    if (liveActive)
-        R_PFS->PORT[OUT_PORT].PIN[OUT_PIN].PmnPFS_b.PODR ^= 1;
+  static uint16_t pdmAcc = 0;
 
-    R_GPT2->GTCR_b.CST = 1;
-    R_ICU->IELSR_b[TIMER_INT].IR = 0;
+  // Base condition: are we even trying to produce a waveform?
+  if (liveActive) {
+
+    bool allowToggle = true;
+
+    // If drums are active, amplitude-gate the toggling
+    if (g_drumGateEnable) {
+      // PDM: accumulator adds level; overflow == "on"
+      pdmAcc += g_drumLevelQ15;          // 0..32767
+      allowToggle = (pdmAcc & 0x8000);   // overflow-ish bit
+    }
+
+    if (allowToggle) {
+      R_PFS->PORT[OUT_PORT].PIN[OUT_PIN].PmnPFS_b.PODR ^= 1;
+    } else {
+      // force low during "off" slices (reduces clicking)
+      R_PFS->PORT[OUT_PORT].PIN[OUT_PIN].PmnPFS_b.PODR = 0;
+    }
+  }
+
+  R_ICU->IELSR_b[TIMER_INT].IR = 0;
 }
 
 //Harmonies

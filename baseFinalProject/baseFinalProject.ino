@@ -14,8 +14,8 @@ void setup() {
   while (!Serial) {}
 
   Serial.println("SETUP");
-  // testAll();
-  // while(true);
+  testAll();
+  while(true);
 
   initGPT();
   mpuInit();    

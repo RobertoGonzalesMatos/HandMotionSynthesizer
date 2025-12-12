@@ -1,6 +1,6 @@
 #ifndef SOUNDENGINE_H
 #define SOUNDENGINE_H
-// #define TESTING
+#define TESTING
 struct Voice;
 const int CLOCKFREQ      = 3000000;
 
