@@ -136,22 +136,18 @@ void stopPlay() {
 void gptISR() {
   static uint16_t pdmAcc = 0;
 
-  // Base condition: are we even trying to produce a waveform?
   if (liveActive) {
 
     bool allowToggle = true;
 
-    // If drums are active, amplitude-gate the toggling
     if (g_drumGateEnable) {
-      // PDM: accumulator adds level; overflow == "on"
-      pdmAcc += g_drumLevelQ15;          // 0..32767
-      allowToggle = (pdmAcc & 0x8000);   // overflow-ish bit
+      pdmAcc += g_drumLevelQ15;          
+      allowToggle = (pdmAcc & 0x8000);   
     }
 
     if (allowToggle) {
       R_PFS->PORT[OUT_PORT].PIN[OUT_PIN].PmnPFS_b.PODR ^= 1;
     } else {
-      // force low during "off" slices (reduces clicking)
       R_PFS->PORT[OUT_PORT].PIN[OUT_PIN].PmnPFS_b.PODR = 0;
     }
   }
